@@ -1,0 +1,142 @@
+#include "first_app.h"
+#include "log.hpp"
+#include "ref.hpp"
+#include "vkao_pipeline.h"
+#include "vulkan/vulkan_core.h"
+#include <array>
+#include <cstdint>
+
+namespace vkao {
+FirstApp::FirstApp() {
+    create_pipeline_layout();
+    create_pipeline();
+    create_command_buffers();
+}
+
+FirstApp::~FirstApp() {
+    vkDestroyPipelineLayout(
+        vkao_device_.get_device(), pipeline_layout_, nullptr);
+}
+
+void FirstApp::run() {
+    while (running_) {
+        SDL_Event event;
+
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
+                running_ = false;
+            }
+        }
+
+        draw_frame();
+    }
+
+    vkDeviceWaitIdle(vkao_device_.get_device());
+}
+
+void FirstApp::create_pipeline_layout() {
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 0;            // Optional
+    pipelineLayoutInfo.pSetLayouts = nullptr;         // Optional
+    pipelineLayoutInfo.pushConstantRangeCount = 0;    // Optional
+    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+
+    VKAO_ASSERT(vkCreatePipelineLayout(vkao_device_.get_device(),
+                                       &pipelineLayoutInfo,
+                                       nullptr,
+                                       &pipeline_layout_) == VK_SUCCESS,
+                "failed to create pipeline layout!");
+}
+
+void FirstApp::create_pipeline() {
+    PipelineConfigInfo config_info{};
+
+    VkaoPipeline::create_default_pipeline_config_info(config_info);
+
+    config_info.pipeline_layout = pipeline_layout_;
+    config_info.render_pass = vkao_swap_chain_.get_render_pass();
+    vkao_pipeline_ = make_ref<VkaoPipeline>(
+        vkao_device_, "shader.vert.spv", "shader.frag.spv", config_info);
+}
+void FirstApp::create_command_buffers() {
+    command_buffers_.resize(vkao_swap_chain_.image_count());
+
+    VkCommandBufferAllocateInfo alloc_info{};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandPool = vkao_device_.get_command_pool();
+    alloc_info.commandBufferCount =
+        static_cast<uint32_t>(command_buffers_.size());
+
+    VKAO_ASSERT(vkAllocateCommandBuffers(vkao_device_.get_device(),
+                                         &alloc_info,
+                                         command_buffers_.data()) == VK_SUCCESS,
+                "failed to allocate command buffers!");
+
+    for (int i = 0; i < command_buffers_.size(); i++) {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        VKAO_ASSERT(vkBeginCommandBuffer(command_buffers_[i], &beginInfo) ==
+                        VK_SUCCESS,
+                    "failed to begin recording command buffer!");
+
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = vkao_swap_chain_.get_render_pass();
+        renderPassInfo.framebuffer = vkao_swap_chain_.get_frame_buffer(i);
+        renderPassInfo.renderArea.offset = {0, 0};
+
+        renderPassInfo.renderArea.extent =
+            vkao_swap_chain_.get_swap_chain_extent();
+        std::array<VkClearValue, 2> clear_values{};
+        clear_values[0].color = {0.f, 0.f, 0.f, 1.f};
+        clear_values[1].depthStencil = {1.f, 0};
+
+        renderPassInfo.clearValueCount =
+            static_cast<uint32_t>(clear_values.size());
+        renderPassInfo.pClearValues = clear_values.data();
+
+        vkCmdBeginRenderPass(
+            command_buffers_[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkao_pipeline_->bind(command_buffers_[i]);
+
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width =
+            static_cast<float>(vkao_swap_chain_.get_swap_chain_extent().width);
+        viewport.height =
+            static_cast<float>(vkao_swap_chain_.get_swap_chain_extent().height);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport(command_buffers_[i], 0, 1, &viewport);
+
+        VkRect2D scissor{};
+        scissor.offset = {0, 0};
+        scissor.extent = vkao_swap_chain_.get_swap_chain_extent();
+        vkCmdSetScissor(command_buffers_[i], 0, 1, &scissor);
+
+        vkCmdDraw(command_buffers_[i], 3, 1, 0, 0);
+
+        vkCmdEndRenderPass(command_buffers_[i]);
+
+        VKAO_ASSERT(vkEndCommandBuffer(command_buffers_[i]) == VK_SUCCESS,
+                    "failed to record command buffer!");
+    }
+}
+void FirstApp::draw_frame() {
+    uint32_t image_index;
+    auto result = vkao_swap_chain_.acquire_next_image(&image_index);
+
+    VKAO_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR,
+                "failed to acquire swap chain image!");
+
+    result = vkao_swap_chain_.submit_command_buffers(
+        &command_buffers_[image_index], &image_index);
+
+    VKAO_ASSERT(result == VK_SUCCESS, "failed to present swap chain image!");
+}
+} // namespace vkao
