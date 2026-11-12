@@ -1,6 +1,7 @@
 #pragma once
 
 #include "glm/ext/vector_float2.hpp"
+#include "glm/ext/vector_float3.hpp"
 #include "ref.hpp"
 #include "vkao_device.hpp"
 #include "vulkan/vulkan_core.h"
@@ -13,7 +14,8 @@ namespace vkao {
 class VkaoModel : public RefCounted {
   public:
     struct Vertex {
-        glm::vec2 pos;
+        glm::vec3 pos;
+        glm::vec3 color;
 
         static std::vector<VkVertexInputBindingDescription>
         get_binding_description();
@@ -21,7 +23,7 @@ class VkaoModel : public RefCounted {
         static std::vector<VkVertexInputAttributeDescription>
         get_attribute_description();
     };
-    static_assert(sizeof(Vertex) == 8);
+    static_assert(sizeof(Vertex) == 24);
 
     VkaoModel(VkaoDevice &device, const std::vector<Vertex> &vertexes);
     ~VkaoModel();

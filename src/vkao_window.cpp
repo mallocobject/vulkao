@@ -15,10 +15,18 @@ VkaoWindow::~VkaoWindow() {
     SDL_Quit();
 }
 
+void VkaoWindow::on_window_resized(uint32_t width, uint32_t height) {
+    width_ = width;
+    height_ = height;
+    frame_buffer_resized_ = true;
+}
+
 void VkaoWindow::init_window() {
     SDL_Init(SDL_INIT_VIDEO);
-    window_ = SDL_CreateWindow(
-        window_name_.c_str(), width_, height_, SDL_WINDOW_VULKAN);
+    window_ = SDL_CreateWindow(window_name_.c_str(),
+                               width_,
+                               height_,
+                               SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 }
 
 void VkaoWindow::create_window_surface(VkInstance instance,

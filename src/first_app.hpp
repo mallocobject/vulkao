@@ -11,7 +11,7 @@
 #include <vector>
 
 namespace vkao {
-class FirstApp : public RefCounted {
+class FirstApp {
   public:
     static constexpr uint32_t WIDTH = 800;
     static constexpr uint32_t HEIGHT = 600;
@@ -28,11 +28,14 @@ class FirstApp : public RefCounted {
     void create_pipeline_layout();
     void create_pipeline();
     void create_command_buffers();
+    void free_command_buffers();
     void draw_frame();
+    void recreate_swap_chain();
+    void record_command_buffer(int image_index);
 
     VkaoWindow vkao_window_{WIDTH, HEIGHT, "vulkao"};
     VkaoDevice vkao_device_{vkao_window_};
-    VkaoSwapChain vkao_swap_chain_{vkao_device_, vkao_window_.get_extent()};
+    Ref<VkaoSwapChain> vkao_swap_chain_;
     Ref<VkaoPipeline> vkao_pipeline_;
     VkPipelineLayout pipeline_layout_;
     std::vector<VkCommandBuffer> command_buffers_;

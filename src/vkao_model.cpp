@@ -19,12 +19,19 @@ VkaoModel::Vertex::get_binding_description() {
 
 std::vector<VkVertexInputAttributeDescription>
 VkaoModel::Vertex::get_attribute_description() {
-    std::vector<VkVertexInputAttributeDescription> attribute_descriptions(1);
+    std::vector<VkVertexInputAttributeDescription> attribute_descriptions(2);
+
     // position
     attribute_descriptions[0].location = 0;
     attribute_descriptions[0].binding = 0;
-    attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT; // signed
+    attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT; // signed
     attribute_descriptions[0].offset = offsetof(Vertex, pos);
+
+    // color
+    attribute_descriptions[1].location = 1;
+    attribute_descriptions[1].binding = 0;
+    attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attribute_descriptions[1].offset = offsetof(Vertex, color);
 
     return attribute_descriptions;
 }

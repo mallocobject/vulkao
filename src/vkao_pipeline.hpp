@@ -11,8 +11,6 @@ struct PipelineConfigInfo {
     PipelineConfigInfo() = default;
     PipelineConfigInfo(const PipelineConfigInfo &) = delete;
 
-    std::vector<VkVertexInputBindingDescription> binding_descriptions{};
-    std::vector<VkVertexInputAttributeDescription> attribute_descriptions{};
     VkPipelineViewportStateCreateInfo viewport_info;
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info;
     VkPipelineRasterizationStateCreateInfo rasterization_info;
@@ -20,6 +18,7 @@ struct PipelineConfigInfo {
     VkPipelineColorBlendAttachmentState color_blend_attachment;
     VkPipelineColorBlendStateCreateInfo color_blend_info;
     VkPipelineDepthStencilStateCreateInfo depth_stencil_info;
+
     std::vector<VkDynamicState> dynamic_state_enables;
     VkPipelineDynamicStateCreateInfo dynamic_state_info;
 
