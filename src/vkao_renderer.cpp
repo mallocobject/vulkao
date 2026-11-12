@@ -1,4 +1,7 @@
 #include "vkao_renderer.hpp"
+
+#include "logger.hpp"
+#include "vkao_swap_chain.hpp"
 #include "vulkan/vulkan_core.h"
 #include <array>
 
@@ -6,6 +9,7 @@ namespace vkao {
 VkaoRenderer::VkaoRenderer(VkaoWindow &window, VkaoDevice &device)
     : vkao_window_{window}, vkao_device_{device} {
     recreate_swap_chain();
+    create_command_buffers();
 }
 
 VkaoRenderer::~VkaoRenderer() {
@@ -13,7 +17,7 @@ VkaoRenderer::~VkaoRenderer() {
 }
 
 void VkaoRenderer::create_command_buffers() {
-    command_buffers_.resize(vkao_swap_chain_->image_count());
+    command_buffers_.resize(VkaoSwapChain::MAX_FRAMES_IN_FLIGHT);
 
     VkCommandBufferAllocateInfo alloc_info{};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -54,12 +58,9 @@ void VkaoRenderer::recreate_swap_chain() {
     vkao_swap_chain_ =
         make_ref<VkaoSwapChain>(vkao_device_, extent, old_swap_chain);
 
-    if (vkao_swap_chain_->image_count() != command_buffers_.size()) {
-        if (!command_buffers_.empty()) {
-            free_command_buffers();
-        }
-
-        create_command_buffers();
+    if (old_swap_chain) {
+        VKAO_ASSERT(vkao_swap_chain_->compare_swap_formats(*old_swap_chain),
+                    "swap chain image(or depth) format has changed!");
     }
 }
 
@@ -112,6 +113,9 @@ void VkaoRenderer::end_frame() {
     }
 
     is_frame_started_ = false;
+
+    current_frame_index_ =
+        (current_frame_index_ + 1) % VkaoSwapChain::MAX_FRAMES_IN_FLIGHT;
 }
 
 void VkaoRenderer::begin_swap_chain_render_pass(
