@@ -1,12 +1,10 @@
 #pragma once
 
-#include "glm/ext/matrix_float3x3.hpp"
-#include "glm/ext/vector_float3.hpp"
 #include "ref.hpp"
 #include "vkao_device.hpp"
 #include "vkao_model.hpp"
 #include "vkao_pipeline.hpp"
-#include "vkao_swap_chain.hpp"
+#include "vkao_renderer.hpp"
 #include "vkao_window.hpp"
 #include "vulkan/vulkan_core.h"
 #include <cstdint>
@@ -37,18 +35,15 @@ class FirstApp {
     void load_models();
     void create_pipeline_layout();
     void create_pipeline();
-    void create_command_buffers();
-    void free_command_buffers();
-    void draw_frame();
-    void recreate_swap_chain();
-    void record_command_buffer(int image_index);
+
+    void draw(VkCommandBuffer command_buffer);
 
     VkaoWindow vkao_window_{WIDTH, HEIGHT, "vulkao"};
     VkaoDevice vkao_device_{vkao_window_};
-    Ref<VkaoSwapChain> vkao_swap_chain_;
+    VkaoRenderer vkao_renderer_{vkao_window_, vkao_device_};
+
     Ref<VkaoPipeline> vkao_pipeline_;
     VkPipelineLayout pipeline_layout_;
-    std::vector<VkCommandBuffer> command_buffers_;
     Ref<VkaoModel> vkao_model_;
     bool running_{true};
 };

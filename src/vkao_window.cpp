@@ -1,6 +1,6 @@
 #include "vkao_window.hpp"
 
-#include "log.hpp"
+#include "logger.hpp"
 
 namespace vkao {
 VkaoWindow::VkaoWindow(uint32_t w, uint32_t h, std::string_view name)
