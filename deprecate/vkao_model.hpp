@@ -25,7 +25,7 @@ class VkaoModel : public RefCounted {
     };
     static_assert(sizeof(Vertex) == 24);
 
-    VkaoModel(VkaoDevice &device, const std::vector<Vertex> &vertexes);
+    VkaoModel(VkaoDevice &device, const std::vector<Vertex> &vertices);
     ~VkaoModel();
 
     VkaoModel(const VkaoModel &) = delete;
@@ -34,7 +34,7 @@ class VkaoModel : public RefCounted {
     void draw(VkCommandBuffer command_buffer);
 
   private:
-    void create_vertex_buffers(const std::vector<Vertex> &vertexes);
+    void create_vertex_buffers(const std::vector<Vertex> &vertices);
 
     VkaoDevice &vkao_device_;
     VkBuffer vertex_buffer_;

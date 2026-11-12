@@ -1,7 +1,7 @@
 #include "vkao_pipeline.hpp"
 
 #include "logger.hpp"
-#include "vkao_model.hpp"
+#include "vkao_mesh.hpp"
 #include "vulkan/vulkan_core.h"
 #include <cstdint>
 #include <fstream>
@@ -75,9 +75,8 @@ void VkaoPipeline::create_graphics_pipeline(
     shader_stage_infos[1].module = frag_shader_module_;
     shader_stage_infos[1].pName = "main";
 
-    auto binding_descriptions = VkaoModel::Vertex::get_binding_description();
-    auto attribute_descriptions =
-        VkaoModel::Vertex::get_attribute_description();
+    auto binding_descriptions = Vertex::get_binding_description();
+    auto attribute_descriptions = Vertex::get_attribute_description();
     VkPipelineVertexInputStateCreateInfo vertex_input_info{};
     vertex_input_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

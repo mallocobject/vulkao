@@ -11,7 +11,7 @@
 #include <vector>
 
 namespace vkao {
-class VkaoRenderer {
+class VkaoRenderer : public RefCounted {
   public:
     VkaoRenderer(VkaoWindow &window, VkaoDevice &device);
     ~VkaoRenderer();

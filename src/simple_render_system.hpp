@@ -2,18 +2,16 @@
 
 #include "ref.hpp"
 #include "vkao_device.hpp"
-#include "vkao_model.hpp"
+#include "vkao_entity.hpp"
 #include "vkao_pipeline.hpp"
 #include "vulkan/vulkan_core.h"
 #include <glm/glm.hpp>
 
 namespace vkao {
 struct SimplePushConstant {
-    alignas(16) glm::mat3 transform{1.f};
-    alignas(16) glm::vec3 offset;
-    alignas(16) glm::vec3 color;
+    alignas(16) glm::mat4 transform{1.f};
 };
-static_assert(sizeof(SimplePushConstant) == 80);
+static_assert(sizeof(SimplePushConstant) == 64);
 
 class SimpleRenderSystem {
   public:
@@ -22,7 +20,7 @@ class SimpleRenderSystem {
 
     SimpleRenderSystem(const SimpleRenderSystem &) = delete;
 
-    void draw(VkCommandBuffer command_buffer, const Ref<VkaoModel> &model);
+    void draw(VkCommandBuffer command_buffer, Entity entity);
 
   private:
     void create_pipeline_layout();

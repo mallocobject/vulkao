@@ -2,11 +2,13 @@
 
 #include "ref.hpp"
 #include "vkao_device.hpp"
-#include "vkao_model.hpp"
+#include "vkao_entity.hpp"
+#include "vkao_registry.hpp"
 #include "vkao_renderer.hpp"
 #include "vkao_window.hpp"
 #include <cstdint>
 #include <glm/glm.hpp>
+#include <unordered_map>
 #include <vector>
 
 namespace vkao {
@@ -23,13 +25,15 @@ class FirstApp {
     void run();
 
   private:
-    void load_models();
+    void load_entities();
 
     VkaoWindow vkao_window_{WIDTH, HEIGHT, "vulkao"};
     VkaoDevice vkao_device_{vkao_window_};
     VkaoRenderer vkao_renderer_{vkao_window_, vkao_device_};
 
-    Ref<VkaoModel> vkao_model_;
     bool running_{true};
+
+    Registry registry_;
+    std::unordered_map<uint32_t, Entity> entities_;
 };
 } // namespace vkao

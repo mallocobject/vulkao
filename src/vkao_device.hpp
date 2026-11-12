@@ -25,7 +25,7 @@ struct SwapChainSupportDetails {
     std::vector<VkPresentModeKHR> presentModes;
 };
 
-class VkaoDevice {
+class VkaoDevice : public RefCounted {
   public:
 #if defined(NDEBUG)
     const bool enableValidationLayers = false;

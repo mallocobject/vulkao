@@ -1,34 +1,37 @@
 #pragma once
 
-#include <cmath>
+#include "glm/ext/vector_float3.hpp"
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
 
-namespace ivx {
-inline glm::mat4 rotation_matrix_from_euler(const glm::vec3 &rotation) {
-    float yaw = rotation.y;
-    float pitch = rotation.x;
-    float roll = rotation.z;
-
-    const float cy = std::cos(yaw), sy = std::sin(yaw);
-    const float cp = std::cos(pitch), sp = std::sin(pitch);
-    const float cr = std::cos(roll), sr = std::sin(roll);
-
-    glm::mat4 R(1.0f);
-
-    // GLM col-main: R[col][row]
-    R[0][0] = cy * cr + sy * sp * sr;
-    R[0][1] = cp * sr;
-    R[0][2] = -sy * cr + cy * sp * sr;
-
-    R[1][0] = -cy * sr + sy * sp * cr;
-    R[1][1] = cp * cr;
-    R[1][2] = sy * sr + cy * sp * cr;
-
-    R[2][0] = sy * cp;
-    R[2][1] = -sp;
-    R[2][2] = cy * cp;
-
-    return R;
+namespace vkao {
+inline glm::mat4 SRT(const glm::vec3 &scale,
+                     const glm::vec3 &rotation,
+                     const glm::vec3 &translation) {
+    const float c3 = glm::cos(rotation.z);
+    const float s3 = glm::sin(rotation.z);
+    const float c2 = glm::cos(rotation.x);
+    const float s2 = glm::sin(rotation.x);
+    const float c1 = glm::cos(rotation.y);
+    const float s1 = glm::sin(rotation.y);
+    return glm::mat4{{
+                         scale.x * (c1 * c3 + s1 * s2 * s3),
+                         scale.x * (c2 * s3),
+                         scale.x * (c1 * s2 * s3 - c3 * s1),
+                         0.f,
+                     },
+                     {
+                         scale.y * (c3 * s1 * s2 - c1 * s3),
+                         scale.y * (c2 * c3),
+                         scale.y * (c1 * c3 * s2 + s1 * s3),
+                         0.f,
+                     },
+                     {
+                         scale.z * (c2 * s1),
+                         scale.z * (-s2),
+                         scale.z * (c1 * c2),
+                         0.f,
+                     },
+                     {translation.x, translation.y, translation.z, 1.f}};
 }
-} // namespace ivx
+} // namespace vkao

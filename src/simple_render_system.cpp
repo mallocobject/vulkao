@@ -1,8 +1,9 @@
 #include "simple_render_system.hpp"
 
+#include "glm/gtc/constants.hpp"
 #include "logger.hpp"
 #include "ref.hpp"
-#include "vkao_model.hpp"
+#include "vkao_component.hpp"
 #include "vkao_pipeline.hpp"
 #include "vulkan/vulkan_core.h"
 #include <vector>
@@ -55,26 +56,36 @@ void SimpleRenderSystem::create_pipeline(VkRenderPass render_pass) {
         vkao_device_, "shader.vert.spv", "shader.frag.spv", config_info);
 }
 
-void SimpleRenderSystem::draw(VkCommandBuffer command_buffer,
-                              const Ref<VkaoModel> &model) {
+void SimpleRenderSystem::draw(VkCommandBuffer command_buffer, Entity entity) {
     vkao_pipeline_->bind(command_buffer);
-    model->bind(command_buffer);
 
-    for (int i = 0; i < 4; i++) {
-        SimplePushConstant push{};
-        push.offset = glm::vec3{0.f, -0.2f + 0.2f * i, 0.f};
-        push.color = glm::vec3{0.f, 0.f, 0.2f + 0.2f * i};
+    auto &mesh = entity.get_component<MeshComponent>().mesh;
 
-        vkCmdPushConstants(command_buffer,
-                           pipeline_layout_,
-                           VK_SHADER_STAGE_VERTEX_BIT |
-                               VK_SHADER_STAGE_FRAGMENT_BIT,
-                           0,
-                           sizeof(SimplePushConstant),
-                           &push);
+    mesh->bind(command_buffer);
 
-        model->draw(command_buffer);
-    }
+    auto &transform = entity.get_component<TransformComponent>();
+    transform.scale = {0.55f, 0.55f, 0.55f};
+
+    static int cnt = 0;
+    transform.rotation = {glm::mod(cnt * 0.001f, glm::two_pi<float>()),
+                          glm::mod(cnt * 0.0005f, glm::two_pi<float>()),
+                          0.f};
+    cnt++;
+
+    transform.translation = {0.f, 0.f, 0.5f};
+
+    SimplePushConstant push{};
+    push.transform = entity.get_component<TransformComponent>().load_matrix();
+
+    vkCmdPushConstants(command_buffer,
+                       pipeline_layout_,
+                       VK_SHADER_STAGE_VERTEX_BIT |
+                           VK_SHADER_STAGE_FRAGMENT_BIT,
+                       0,
+                       sizeof(SimplePushConstant),
+                       &push);
+
+    mesh->draw(command_buffer);
 }
 
 } // namespace vkao

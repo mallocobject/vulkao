@@ -10,7 +10,7 @@
 #include <SDL3/SDL_vulkan.h>
 
 namespace vkao {
-class VkaoWindow {
+class VkaoWindow : public RefCounted {
   public:
     VkaoWindow(uint32_t w, uint32_t h, std::string_view name);
     ~VkaoWindow();
