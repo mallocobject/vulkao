@@ -43,12 +43,3 @@ SortIncludes: CaseSensitive
 PointerAlignment: Right
 ReferenceAlignment: Pointer
 SpaceAfterTemplateKeyword: true
-
-# Includes: ivxpch.h is always located at first
-IncludeBlocks: Preserve
-IncludeCategories:
-  - Regex: '^"ivxpch\.h"$'
-    Priority: -1
-    SortPriority: -1
-  - Regex: '.*'
-    Priority: 1

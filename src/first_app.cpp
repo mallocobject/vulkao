@@ -1,7 +1,8 @@
-#include "first_app.h"
+#include "first_app.hpp"
+
 #include "log.hpp"
 #include "ref.hpp"
-#include "vkao_pipeline.h"
+#include "vkao_pipeline.hpp"
 #include "vulkan/vulkan_core.h"
 #include <array>
 #include <cstdint>
@@ -35,15 +36,15 @@ void FirstApp::run() {
 }
 
 void FirstApp::create_pipeline_layout() {
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0;            // Optional
-    pipelineLayoutInfo.pSetLayouts = nullptr;         // Optional
-    pipelineLayoutInfo.pushConstantRangeCount = 0;    // Optional
-    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+    VkPipelineLayoutCreateInfo pipeline_layout_info{};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.setLayoutCount = 0;            // Optional
+    pipeline_layout_info.pSetLayouts = nullptr;         // Optional
+    pipeline_layout_info.pushConstantRangeCount = 0;    // Optional
+    pipeline_layout_info.pPushConstantRanges = nullptr; // Optional
 
     VKAO_ASSERT(vkCreatePipelineLayout(vkao_device_.get_device(),
-                                       &pipelineLayoutInfo,
+                                       &pipeline_layout_info,
                                        nullptr,
                                        &pipeline_layout_) == VK_SUCCESS,
                 "failed to create pipeline layout!");
@@ -75,31 +76,31 @@ void FirstApp::create_command_buffers() {
                 "failed to allocate command buffers!");
 
     for (int i = 0; i < command_buffers_.size(); i++) {
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-        VKAO_ASSERT(vkBeginCommandBuffer(command_buffers_[i], &beginInfo) ==
+        VKAO_ASSERT(vkBeginCommandBuffer(command_buffers_[i], &begin_info) ==
                         VK_SUCCESS,
                     "failed to begin recording command buffer!");
 
-        VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = vkao_swap_chain_.get_render_pass();
-        renderPassInfo.framebuffer = vkao_swap_chain_.get_frame_buffer(i);
-        renderPassInfo.renderArea.offset = {0, 0};
+        VkRenderPassBeginInfo render_pass_info{};
+        render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        render_pass_info.renderPass = vkao_swap_chain_.get_render_pass();
+        render_pass_info.framebuffer = vkao_swap_chain_.get_frame_buffer(i);
+        render_pass_info.renderArea.offset = {0, 0};
 
-        renderPassInfo.renderArea.extent =
+        render_pass_info.renderArea.extent =
             vkao_swap_chain_.get_swap_chain_extent();
         std::array<VkClearValue, 2> clear_values{};
         clear_values[0].color = {0.f, 0.f, 0.f, 1.f};
         clear_values[1].depthStencil = {1.f, 0};
 
-        renderPassInfo.clearValueCount =
+        render_pass_info.clearValueCount =
             static_cast<uint32_t>(clear_values.size());
-        renderPassInfo.pClearValues = clear_values.data();
+        render_pass_info.pClearValues = clear_values.data();
 
         vkCmdBeginRenderPass(
-            command_buffers_[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+            command_buffers_[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
         vkao_pipeline_->bind(command_buffers_[i]);
 

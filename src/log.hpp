@@ -572,11 +572,11 @@ inline void AsyncLogger::run(const std::string &dir,
 
 #ifdef _WIN32
 extern "C" {
-__declspec(dllimport) void *__stdcall GetStdHandle(unsigned long nStdHandle);
-__declspec(dllimport) int __stdcall GetConsoleMode(void *hConsoleHandle,
-                                                   unsigned long *lpMode);
-__declspec(dllimport) int __stdcall SetConsoleMode(void *hConsoleHandle,
-                                                   unsigned long dwMode);
+__declspec(dllimport) void *__stdcall GetStdHandle(unsigned long n_std_handle);
+__declspec(dllimport) int __stdcall GetConsoleMode(void *h_console_handle,
+                                                   unsigned long *lp_mode);
+__declspec(dllimport) int __stdcall SetConsoleMode(void *h_console_handle,
+                                                   unsigned long dw_mode);
 }
 #endif
 
@@ -639,14 +639,14 @@ inline std::string env_utf8(const char *name) {
 
 inline bool detect_ansi_support() noexcept {
 #ifdef _WIN32
-    constexpr unsigned long kStdOutputHandle =
+    constexpr unsigned long std_output_handle =
         static_cast<unsigned long>(-11); // STD_OUTPUT_HANDLE
-    constexpr unsigned long kEnableVirtualTerminalProcessing = 0x0004;
+    constexpr unsigned long enable_virtual_terminal_processing = 0x0004;
 
     const void *const invalid_handle =
         reinterpret_cast<const void *>(static_cast<std::intptr_t>(-1));
 
-    void *const handle = GetStdHandle(kStdOutputHandle);
+    void *const handle = GetStdHandle(std_output_handle);
     if (handle == nullptr || handle == invalid_handle) {
         return false;
     }
@@ -655,10 +655,10 @@ inline bool detect_ansi_support() noexcept {
     if (GetConsoleMode(handle, &mode) == 0) {
         return false;
     }
-    if ((mode & kEnableVirtualTerminalProcessing) != 0) {
+    if ((mode & enable_virtual_terminal_processing) != 0) {
         return true;
     }
-    return SetConsoleMode(handle, mode | kEnableVirtualTerminalProcessing) != 0;
+    return SetConsoleMode(handle, mode | enable_virtual_terminal_processing) != 0;
 #else
     return true;
 #endif

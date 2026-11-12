@@ -1,4 +1,4 @@
-#include "vkao_pipeline.h"
+#include "vkao_pipeline.hpp"
 
 #include "log.hpp"
 #include "vulkan/vulkan_core.h"
@@ -14,11 +14,11 @@ static std::vector<char> read_file(const std::filesystem::path &filepath) {
         throw std::runtime_error("failed to open file!");
     }
 
-    size_t fileSize = (size_t)file.tellg();
-    std::vector<char> buffer(fileSize);
+    size_t file_size = (size_t)file.tellg();
+    std::vector<char> buffer(file_size);
 
     file.seekg(0);
-    file.read(buffer.data(), fileSize);
+    file.read(buffer.data(), file_size);
 
     file.close();
 
@@ -73,39 +73,39 @@ void VkaoPipeline::create_graphics_pipeline(
     shader_stage_infos[1].module = frag_shader_module_;
     shader_stage_infos[1].pName = "main";
 
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-    vertexInputInfo.sType =
+    VkPipelineVertexInputStateCreateInfo vertex_input_info{};
+    vertex_input_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
-    vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+    vertex_input_info.vertexBindingDescriptionCount = 0;
+    vertex_input_info.pVertexBindingDescriptions = nullptr; // Optional
+    vertex_input_info.vertexAttributeDescriptionCount = 0;
+    vertex_input_info.pVertexAttributeDescriptions = nullptr; // Optional
 
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shader_stage_infos;
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &config_info.input_assembly_info;
-    pipelineInfo.pViewportState = &config_info.viewport_info;
-    pipelineInfo.pRasterizationState = &config_info.rasterization_info;
-    pipelineInfo.pMultisampleState = &config_info.multisample_info;
-    pipelineInfo.pDepthStencilState =
+    VkGraphicsPipelineCreateInfo pipeline_info{};
+    pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipeline_info.stageCount = 2;
+    pipeline_info.pStages = shader_stage_infos;
+    pipeline_info.pVertexInputState = &vertex_input_info;
+    pipeline_info.pInputAssemblyState = &config_info.input_assembly_info;
+    pipeline_info.pViewportState = &config_info.viewport_info;
+    pipeline_info.pRasterizationState = &config_info.rasterization_info;
+    pipeline_info.pMultisampleState = &config_info.multisample_info;
+    pipeline_info.pDepthStencilState =
         &config_info.depth_stencil_info; // Optional
-    pipelineInfo.pColorBlendState = &config_info.color_blend_info;
-    pipelineInfo.pDynamicState = &config_info.dynamic_state_info;
+    pipeline_info.pColorBlendState = &config_info.color_blend_info;
+    pipeline_info.pDynamicState = &config_info.dynamic_state_info;
 
-    pipelineInfo.layout = config_info.pipeline_layout;
-    pipelineInfo.renderPass = config_info.render_pass;
-    pipelineInfo.subpass = config_info.subpass;
+    pipeline_info.layout = config_info.pipeline_layout;
+    pipeline_info.renderPass = config_info.render_pass;
+    pipeline_info.subpass = config_info.subpass;
 
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
-    pipelineInfo.basePipelineIndex = -1;              // Optional
+    pipeline_info.basePipelineHandle = VK_NULL_HANDLE; // Optional
+    pipeline_info.basePipelineIndex = -1;              // Optional
 
     VKAO_ASSERT(vkCreateGraphicsPipelines(vkao_device_.get_device(),
                                           VK_NULL_HANDLE,
                                           1,
-                                          &pipelineInfo,
+                                          &pipeline_info,
                                           nullptr,
                                           &graphics_pipeline_) == VK_SUCCESS,
                 "failed to create graphics pipeline!");

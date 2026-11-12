@@ -1,10 +1,10 @@
 #pragma once
 
 #include "ref.hpp"
-#include "vkao_device.h"
-#include "vkao_pipeline.h"
-#include "vkao_swap_chain.h"
-#include "vkao_window.h"
+#include "vkao_device.hpp"
+#include "vkao_pipeline.hpp"
+#include "vkao_swap_chain.hpp"
+#include "vkao_window.hpp"
 #include "vulkan/vulkan_core.h"
 #include <cstdint>
 #include <vector>

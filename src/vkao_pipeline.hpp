@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ref.hpp"
-#include "vkao_device.h"
+#include "vkao_device.hpp"
 #include "vulkan/vulkan_core.h"
 #include <filesystem>
 #include <vector>

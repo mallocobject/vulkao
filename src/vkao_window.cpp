@@ -1,4 +1,5 @@
-#include "vkao_window.h"
+#include "vkao_window.hpp"
+
 #include "log.hpp"
 
 namespace vkao {

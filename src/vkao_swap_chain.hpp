@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ref.hpp"
-#include "vkao_device.h"
+#include "vkao_device.hpp"
 
 namespace vkao {
 class VkaoSwapChain : public RefCounted {
@@ -48,9 +48,9 @@ class VkaoSwapChain : public RefCounted {
     }
     VkFormat find_depth_format();
 
-    VkResult acquire_next_image(uint32_t *imageIndex);
+    VkResult acquire_next_image(uint32_t *image_index);
     VkResult submit_command_buffers(const VkCommandBuffer *buffers,
-                                    uint32_t *imageIndex);
+                                    uint32_t *image_index);
 
     bool compare_swap_formats(const VkaoSwapChain &swap_chain) const {
         return swap_chain.swap_chain_depth_format_ ==

@@ -2,8 +2,7 @@
 
 #include "SDL3/SDL_vulkan.h"
 #include "ref.hpp"
-#include "vkao_window.h"
-
+#include "vkao_window.hpp"
 #include "vulkan/vulkan_core.h"
 #include <optional>
 #include <vector>
