@@ -6,7 +6,6 @@
 #include <array>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include <limits>
 
 namespace vkao {
@@ -429,7 +428,7 @@ VkPresentModeKHR VkaoSwapChain::choose_swap_present_mode(
     const std::vector<VkPresentModeKHR> &available_present_modes) {
     for (const auto &available_present_mode : available_present_modes) {
         if (available_present_mode == VK_PRESENT_MODE_MAILBOX_KHR) {
-            std::cout << "Present mode: Mailbox" << std::endl;
+            VKAO_INFO("Present mode: Mailbox");
             return available_present_mode;
         }
     }
@@ -441,7 +440,7 @@ VkPresentModeKHR VkaoSwapChain::choose_swap_present_mode(
     //   }
     // }
 
-    std::cout << "Present mode: V-Sync" << std::endl;
+    VKAO_INFO("Present mode: V-Sync");
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 

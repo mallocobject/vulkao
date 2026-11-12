@@ -658,7 +658,8 @@ inline bool detect_ansi_support() noexcept {
     if ((mode & enable_virtual_terminal_processing) != 0) {
         return true;
     }
-    return SetConsoleMode(handle, mode | enable_virtual_terminal_processing) != 0;
+    return SetConsoleMode(handle, mode | enable_virtual_terminal_processing) !=
+           0;
 #else
     return true;
 #endif
@@ -711,7 +712,11 @@ inline std::atomic<LogLevel> g_log_threshold{[]() -> LogLevel {
     if (!lv.empty()) {
         return log_level_from_string(lv);
     }
+#if defined(NDEBUG)
     return LogLevel::INFO;
+#else
+    return LogLevel::DEBUG;
+#endif
 }()};
 
 // hook function, empty implement in default case

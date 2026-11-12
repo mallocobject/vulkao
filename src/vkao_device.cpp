@@ -2,7 +2,6 @@
 
 #include "log.hpp"
 #include <cstring>
-#include <iostream>
 #include <set>
 #include <unordered_set>
 
@@ -13,7 +12,7 @@ debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
               VkDebugUtilsMessageTypeFlagsEXT message_type,
               const VkDebugUtilsMessengerCallbackDataEXT *p_callback_data,
               void *p_user_data) {
-    std::cerr << "validation layer: " << p_callback_data->pMessage << std::endl;
+    VKAO_DEBUG("validation layer: {}", p_callback_data->pMessage);
 
     return VK_FALSE;
 }
@@ -112,7 +111,8 @@ void VkaoDevice::pick_physical_device() {
     vkEnumeratePhysicalDevices(instance_, &device_count, nullptr);
     VKAO_ASSERT(device_count, "failed to find GPUs with Vulkan support!");
 
-    std::cout << "Device count: " << device_count << std::endl;
+    VKAO_INFO("Device count: {}", device_count);
+
     std::vector<VkPhysicalDevice> devices(device_count);
     vkEnumeratePhysicalDevices(instance_, &device_count, devices.data());
 
@@ -127,7 +127,6 @@ void VkaoDevice::pick_physical_device() {
                 "failed to find a suitable GPU!");
 
     vkGetPhysicalDeviceProperties(physical_device_, &properties);
-    std::cout << "physical device: " << properties.deviceName << std::endl;
 
     VKAO_INFO("physical device: {}", properties.deviceName);
 }
@@ -287,17 +286,18 @@ void VkaoDevice::has_SDL_required_instance_extensions() {
     vkEnumerateInstanceExtensionProperties(
         nullptr, &extension_count, extensions.data());
 
-    std::cout << "available extensions:" << std::endl;
+    VKAO_INFO("available extensions:");
+
     std::unordered_set<std::string> available;
     for (const auto &extension : extensions) {
-        std::cout << "\t" << extension.extensionName << std::endl;
+        VKAO_INFO("\t{}", extension.extensionName);
         available.insert(extension.extensionName);
     }
 
-    std::cout << "required extensions:" << std::endl;
+    VKAO_INFO("required extensions:");
     auto required_extensions = get_required_extensions();
     for (const auto &required : required_extensions) {
-        std::cout << "\t" << required << std::endl;
+        VKAO_INFO("\t{}", required);
         if (available.find(required) == available.end()) {
             throw std::runtime_error("Missing required glfw extension");
         }
