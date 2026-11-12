@@ -1,5 +1,7 @@
 #pragma once
 
+#include "glm/ext/matrix_float3x3.hpp"
+#include "glm/ext/vector_float3.hpp"
 #include "ref.hpp"
 #include "vkao_device.hpp"
 #include "vkao_model.hpp"
@@ -8,9 +10,17 @@
 #include "vkao_window.hpp"
 #include "vulkan/vulkan_core.h"
 #include <cstdint>
+#include <glm/glm.hpp>
 #include <vector>
 
 namespace vkao {
+struct SimplePushConstant {
+    alignas(16) glm::mat3 transform{1.f};
+    alignas(16) glm::vec3 offset;
+    alignas(16) glm::vec3 color;
+};
+static_assert(sizeof(SimplePushConstant) == 80);
+
 class FirstApp {
   public:
     static constexpr uint32_t WIDTH = 800;

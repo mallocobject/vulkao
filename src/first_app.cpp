@@ -1,5 +1,6 @@
 #include "first_app.hpp"
 
+#include "glm/ext/vector_float3.hpp"
 #include "log.hpp"
 #include "ref.hpp"
 #include "vkao_model.hpp"
@@ -104,12 +105,18 @@ void FirstApp::load_models() {
 }
 
 void FirstApp::create_pipeline_layout() {
+    VkPushConstantRange push_constant_range{};
+    push_constant_range.stageFlags =
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant_range.offset = 0;
+    push_constant_range.size = sizeof(SimplePushConstant);
+
     VkPipelineLayoutCreateInfo pipeline_layout_info{};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = 0;            // Optional
-    pipeline_layout_info.pSetLayouts = nullptr;         // Optional
-    pipeline_layout_info.pushConstantRangeCount = 0;    // Optional
-    pipeline_layout_info.pPushConstantRanges = nullptr; // Optional
+    pipeline_layout_info.setLayoutCount = 0;    // Optional
+    pipeline_layout_info.pSetLayouts = nullptr; // Optional
+    pipeline_layout_info.pushConstantRangeCount = 1;
+    pipeline_layout_info.pPushConstantRanges = &push_constant_range;
 
     VKAO_ASSERT(vkCreatePipelineLayout(vkao_device_.get_device(),
                                        &pipeline_layout_info,
@@ -266,9 +273,23 @@ void FirstApp::record_command_buffer(int image_index) {
     }
 
     vkao_pipeline_->bind(command_buffers_[image_index]);
-
     vkao_model_->bind(command_buffers_[image_index]);
-    vkao_model_->draw(command_buffers_[image_index]);
+
+    for (int i = 0; i < 4; i++) {
+        SimplePushConstant push{};
+        push.offset = glm::vec3{0.f, -0.2f + 0.2f * i, 0.f};
+        push.color = glm::vec3{0.f, 0.f, 0.2f + 0.2f * i};
+
+        vkCmdPushConstants(command_buffers_[image_index],
+                           pipeline_layout_,
+                           VK_SHADER_STAGE_VERTEX_BIT |
+                               VK_SHADER_STAGE_FRAGMENT_BIT,
+                           0,
+                           sizeof(SimplePushConstant),
+                           &push);
+
+        vkao_model_->draw(command_buffers_[image_index]);
+    }
 
     vkCmdEndRenderPass(command_buffers_[image_index]);
 
