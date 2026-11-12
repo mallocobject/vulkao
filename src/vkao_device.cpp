@@ -43,7 +43,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
 } // namespace
 
 // class member functions
-VkaoDevice::VkaoDevice(VkaoWindow &window) : window_{window} {
+VkaoDevice::VkaoDevice(VkaoWindow &window) : vkao_window_{window} {
     create_instance();
     setup_debug_messenger();
     create_surface();
@@ -189,7 +189,7 @@ void VkaoDevice::create_command_pool() {
 }
 
 void VkaoDevice::create_surface() {
-    window_.create_window_surface(instance_, &surface_);
+    vkao_window_.create_window_surface(instance_, &surface_);
 }
 
 bool VkaoDevice::is_device_suitable(VkPhysicalDevice device) {

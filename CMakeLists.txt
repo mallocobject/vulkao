@@ -23,6 +23,11 @@ target_include_directories(vulkao PRIVATE D:/sdk/VulkanSDK/1.4.363.1/Include)
 target_link_directories(vulkao PRIVATE D:/sdk/VulkanSDK/1.4.363.1/Lib)
 target_link_libraries(vulkao PRIVATE SDL3 vulkan-1)
 
+target_compile_definitions(vulkao PRIVATE
+    GLM_FORCE_RADIANS
+    GLM_FORCE_DEPTH_ZERO_TO_ONE
+)
+
 vulkao_add_shaders(vulkao
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/shader.vert"
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/shader.frag"

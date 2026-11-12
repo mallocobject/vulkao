@@ -1,7 +1,9 @@
 #include "vkao_pipeline.hpp"
 
 #include "log.hpp"
+#include "vkao_model.hpp"
 #include "vulkan/vulkan_core.h"
+#include <cstdint>
 #include <fstream>
 #include <vector>
 
@@ -73,13 +75,19 @@ void VkaoPipeline::create_graphics_pipeline(
     shader_stage_infos[1].module = frag_shader_module_;
     shader_stage_infos[1].pName = "main";
 
+    auto binding_descriptions = VkaoModel::Vertex::get_binding_description();
+    auto attribute_descriptions =
+        VkaoModel::Vertex::get_attribute_description();
     VkPipelineVertexInputStateCreateInfo vertex_input_info{};
     vertex_input_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertex_input_info.vertexBindingDescriptionCount = 0;
-    vertex_input_info.pVertexBindingDescriptions = nullptr; // Optional
-    vertex_input_info.vertexAttributeDescriptionCount = 0;
-    vertex_input_info.pVertexAttributeDescriptions = nullptr; // Optional
+    vertex_input_info.vertexBindingDescriptionCount =
+        static_cast<uint32_t>(binding_descriptions.size());
+    vertex_input_info.pVertexBindingDescriptions = binding_descriptions.data();
+    vertex_input_info.vertexAttributeDescriptionCount =
+        static_cast<uint32_t>(attribute_descriptions.size());
+    vertex_input_info.pVertexAttributeDescriptions =
+        attribute_descriptions.data();
 
     VkGraphicsPipelineCreateInfo pipeline_info{};
     pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

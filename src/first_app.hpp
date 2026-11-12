@@ -2,6 +2,7 @@
 
 #include "ref.hpp"
 #include "vkao_device.hpp"
+#include "vkao_model.hpp"
 #include "vkao_pipeline.hpp"
 #include "vkao_swap_chain.hpp"
 #include "vkao_window.hpp"
@@ -23,6 +24,7 @@ class FirstApp : public RefCounted {
     void run();
 
   private:
+    void load_models();
     void create_pipeline_layout();
     void create_pipeline();
     void create_command_buffers();
@@ -34,6 +36,7 @@ class FirstApp : public RefCounted {
     Ref<VkaoPipeline> vkao_pipeline_;
     VkPipelineLayout pipeline_layout_;
     std::vector<VkCommandBuffer> command_buffers_;
+    Ref<VkaoModel> vkao_model_;
     bool running_{true};
 };
 } // namespace vkao

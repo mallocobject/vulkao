@@ -16,7 +16,7 @@ VkaoSwapChain::VkaoSwapChain(VkaoDevice &device, VkExtent2D window_extent)
 VkaoSwapChain::VkaoSwapChain(VkaoDevice &device,
                              VkExtent2D window_extent,
                              const Ref<VkaoSwapChain> &previous)
-    : device_{device}, window_extent_{window_extent},
+    : vkao_device_{device}, window_extent_{window_extent},
       old_swap_chain_{previous} {
     init();
     old_swap_chain_.reset();
@@ -33,47 +33,48 @@ void VkaoSwapChain::init() {
 
 VkaoSwapChain::~VkaoSwapChain() {
     for (auto image_view : swap_chain_image_views_) {
-        vkDestroyImageView(device_.get_device(), image_view, nullptr);
+        vkDestroyImageView(vkao_device_.get_device(), image_view, nullptr);
     }
     swap_chain_image_views_.clear();
 
     if (swap_chain_ != nullptr) {
-        vkDestroySwapchainKHR(device_.get_device(), swap_chain_, nullptr);
+        vkDestroySwapchainKHR(vkao_device_.get_device(), swap_chain_, nullptr);
         swap_chain_ = nullptr;
     }
 
     for (int i = 0; i < depth_images_.size(); i++) {
         vkDestroyImageView(
-            device_.get_device(), depth_image_views_[i], nullptr);
-        vkDestroyImage(device_.get_device(), depth_images_[i], nullptr);
-        vkFreeMemory(device_.get_device(), depth_image_memorys_[i], nullptr);
+            vkao_device_.get_device(), depth_image_views_[i], nullptr);
+        vkDestroyImage(vkao_device_.get_device(), depth_images_[i], nullptr);
+        vkFreeMemory(
+            vkao_device_.get_device(), depth_image_memorys_[i], nullptr);
     }
 
     for (auto frame_buffer : swap_chain_frame_buffers_) {
-        vkDestroyFramebuffer(device_.get_device(), frame_buffer, nullptr);
+        vkDestroyFramebuffer(vkao_device_.get_device(), frame_buffer, nullptr);
     }
 
-    vkDestroyRenderPass(device_.get_device(), render_pass_, nullptr);
+    vkDestroyRenderPass(vkao_device_.get_device(), render_pass_, nullptr);
 
     // cleanup synchronization objects
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(
-            device_.get_device(), render_finished_semaphores_[i], nullptr);
+            vkao_device_.get_device(), render_finished_semaphores_[i], nullptr);
         vkDestroySemaphore(
-            device_.get_device(), image_available_semaphores_[i], nullptr);
-        vkDestroyFence(device_.get_device(), inflight_fences_[i], nullptr);
+            vkao_device_.get_device(), image_available_semaphores_[i], nullptr);
+        vkDestroyFence(vkao_device_.get_device(), inflight_fences_[i], nullptr);
     }
 }
 
 VkResult VkaoSwapChain::acquire_next_image(uint32_t *image_index) {
-    vkWaitForFences(device_.get_device(),
+    vkWaitForFences(vkao_device_.get_device(),
                     1,
                     &inflight_fences_[current_frame_],
                     VK_TRUE,
                     std::numeric_limits<uint64_t>::max());
 
     VkResult result = vkAcquireNextImageKHR(
-        device_.get_device(),
+        vkao_device_.get_device(),
         swap_chain_,
         std::numeric_limits<uint64_t>::max(),
         image_available_semaphores_[current_frame_], // must be a not signaled
@@ -87,7 +88,7 @@ VkResult VkaoSwapChain::acquire_next_image(uint32_t *image_index) {
 VkResult VkaoSwapChain::submit_command_buffers(const VkCommandBuffer *buffers,
                                                uint32_t *image_index) {
     if (images_inflight_[*image_index] != VK_NULL_HANDLE) {
-        vkWaitForFences(device_.get_device(),
+        vkWaitForFences(vkao_device_.get_device(),
                         1,
                         &images_inflight_[*image_index],
                         VK_TRUE,
@@ -114,9 +115,10 @@ VkResult VkaoSwapChain::submit_command_buffers(const VkCommandBuffer *buffers,
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = signal_semaphores;
 
-    vkResetFences(device_.get_device(), 1, &inflight_fences_[current_frame_]);
+    vkResetFences(
+        vkao_device_.get_device(), 1, &inflight_fences_[current_frame_]);
 
-    VKAO_ASSERT(vkQueueSubmit(device_.get_graphics_queue(),
+    VKAO_ASSERT(vkQueueSubmit(vkao_device_.get_graphics_queue(),
                               1,
                               &submit_info,
                               inflight_fences_[current_frame_]) == VK_SUCCESS,
@@ -134,7 +136,8 @@ VkResult VkaoSwapChain::submit_command_buffers(const VkCommandBuffer *buffers,
 
     present_info.pImageIndices = image_index;
 
-    auto result = vkQueuePresentKHR(device_.get_present_queue(), &present_info);
+    auto result =
+        vkQueuePresentKHR(vkao_device_.get_present_queue(), &present_info);
 
     current_frame_ = (current_frame_ + 1) % MAX_FRAMES_IN_FLIGHT;
 
@@ -143,7 +146,7 @@ VkResult VkaoSwapChain::submit_command_buffers(const VkCommandBuffer *buffers,
 
 void VkaoSwapChain::create_swap_chain() {
     SwapChainSupportDetails swap_chain_support =
-        device_.get_swap_chain_support();
+        vkao_device_.get_swap_chain_support();
 
     VkSurfaceFormatKHR surface_format =
         choose_swap_surface_format(swap_chain_support.formats);
@@ -159,7 +162,7 @@ void VkaoSwapChain::create_swap_chain() {
 
     VkSwapchainCreateInfoKHR create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    create_info.surface = device_.get_surface();
+    create_info.surface = vkao_device_.get_surface();
 
     create_info.minImageCount = image_count;
     create_info.imageFormat = surface_format.format;
@@ -168,7 +171,7 @@ void VkaoSwapChain::create_swap_chain() {
     create_info.imageArrayLayers = 1;
     create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    QueueFamilyIndices indices = device_.find_physical_queue_families();
+    QueueFamilyIndices indices = vkao_device_.find_physical_queue_families();
     uint32_t queue_family_indices[] = {indices.graphics_family.value(),
                                        indices.present_family.value()};
 
@@ -191,7 +194,7 @@ void VkaoSwapChain::create_swap_chain() {
     create_info.oldSwapchain =
         old_swap_chain_ ? old_swap_chain_->swap_chain_ : VK_NULL_HANDLE;
 
-    VKAO_ASSERT(vkCreateSwapchainKHR(device_.get_device(),
+    VKAO_ASSERT(vkCreateSwapchainKHR(vkao_device_.get_device(),
                                      &create_info,
                                      nullptr,
                                      &swap_chain_) == VK_SUCCESS,
@@ -203,9 +206,9 @@ void VkaoSwapChain::create_swap_chain() {
     // vkGetSwapchainImagesKHR, then resize the container and finally call it
     // again to retrieve the handles.
     vkGetSwapchainImagesKHR(
-        device_.get_device(), swap_chain_, &image_count, nullptr);
+        vkao_device_.get_device(), swap_chain_, &image_count, nullptr);
     swap_chain_images_.resize(image_count);
-    vkGetSwapchainImagesKHR(device_.get_device(),
+    vkGetSwapchainImagesKHR(vkao_device_.get_device(),
                             swap_chain_,
                             &image_count,
                             swap_chain_images_.data());
@@ -228,7 +231,7 @@ void VkaoSwapChain::create_image_views() {
         view_info.subresourceRange.baseArrayLayer = 0;
         view_info.subresourceRange.layerCount = 1;
 
-        VKAO_ASSERT(vkCreateImageView(device_.get_device(),
+        VKAO_ASSERT(vkCreateImageView(vkao_device_.get_device(),
                                       &view_info,
                                       nullptr,
                                       &swap_chain_image_views_[i]) ==
@@ -297,9 +300,10 @@ void VkaoSwapChain::create_render_pass() {
     render_pass_info.dependencyCount = 1;
     render_pass_info.pDependencies = &dependency;
 
-    if (vkCreateRenderPass(
-            device_.get_device(), &render_pass_info, nullptr, &render_pass_) !=
-        VK_SUCCESS) {
+    if (vkCreateRenderPass(vkao_device_.get_device(),
+                           &render_pass_info,
+                           nullptr,
+                           &render_pass_) != VK_SUCCESS) {
         throw std::runtime_error("failed to create render pass!");
     }
 }
@@ -321,7 +325,7 @@ void VkaoSwapChain::create_frame_buffers() {
         framebuffer_info.height = swap_chain_extent.height;
         framebuffer_info.layers = 1;
 
-        VKAO_ASSERT(vkCreateFramebuffer(device_.get_device(),
+        VKAO_ASSERT(vkCreateFramebuffer(vkao_device_.get_device(),
                                         &framebuffer_info,
                                         nullptr,
                                         &swap_chain_frame_buffers_[i]) ==
@@ -356,10 +360,10 @@ void VkaoSwapChain::create_depth_resources() {
         image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         image_info.flags = 0;
 
-        device_.create_image_with_info(image_info,
-                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                       depth_images_[i],
-                                       depth_image_memorys_[i]);
+        vkao_device_.create_image_with_info(image_info,
+                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                            depth_images_[i],
+                                            depth_image_memorys_[i]);
 
         VkImageViewCreateInfo view_info{};
         view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -372,7 +376,7 @@ void VkaoSwapChain::create_depth_resources() {
         view_info.subresourceRange.baseArrayLayer = 0;
         view_info.subresourceRange.layerCount = 1;
 
-        VKAO_ASSERT(vkCreateImageView(device_.get_device(),
+        VKAO_ASSERT(vkCreateImageView(vkao_device_.get_device(),
                                       &view_info,
                                       nullptr,
                                       &depth_image_views_[i]) == VK_SUCCESS,
@@ -394,17 +398,17 @@ void VkaoSwapChain::create_sync_objects() {
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        VKAO_ASSERT(vkCreateSemaphore(device_.get_device(),
+        VKAO_ASSERT(vkCreateSemaphore(vkao_device_.get_device(),
                                       &semaphore_info,
                                       nullptr,
                                       &image_available_semaphores_[i]) ==
                             VK_SUCCESS &&
-                        vkCreateSemaphore(device_.get_device(),
+                        vkCreateSemaphore(vkao_device_.get_device(),
                                           &semaphore_info,
                                           nullptr,
                                           &render_finished_semaphores_[i]) ==
                             VK_SUCCESS &&
-                        vkCreateFence(device_.get_device(),
+                        vkCreateFence(vkao_device_.get_device(),
                                       &fence_info,
                                       nullptr,
                                       &inflight_fences_[i]) == VK_SUCCESS,
@@ -463,7 +467,7 @@ VkExtent2D VkaoSwapChain::choose_swap_extent(
 }
 
 VkFormat VkaoSwapChain::find_depth_format() {
-    return device_.find_supported_format(
+    return vkao_device_.find_supported_format(
         {VK_FORMAT_D32_SFLOAT,
          VK_FORMAT_D32_SFLOAT_S8_UINT,
          VK_FORMAT_D24_UNORM_S8_UINT},

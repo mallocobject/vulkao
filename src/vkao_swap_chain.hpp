@@ -87,7 +87,7 @@ class VkaoSwapChain : public RefCounted {
     std::vector<VkImage> swap_chain_images_;
     std::vector<VkImageView> swap_chain_image_views_;
 
-    VkaoDevice &device_;
+    VkaoDevice &vkao_device_;
     VkExtent2D window_extent_;
 
     VkSwapchainKHR swap_chain_;

@@ -119,7 +119,7 @@ class VkaoDevice : public RefCounted {
     bool check_device_extension_support(VkPhysicalDevice device);
     SwapChainSupportDetails query_swap_chain_support(VkPhysicalDevice device);
 
-    VkaoWindow &window_;
+    VkaoWindow &vkao_window_;
 
     VkInstance instance_;
     VkDebugUtilsMessengerEXT debug_messenger_;
