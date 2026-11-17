@@ -56,7 +56,9 @@ void SimpleRenderSystem::create_pipeline(VkRenderPass render_pass) {
         vkao_device_, "shader.vert.spv", "shader.frag.spv", config_info);
 }
 
-void SimpleRenderSystem::draw(VkCommandBuffer command_buffer, Entity entity) {
+void SimpleRenderSystem::draw(VkCommandBuffer command_buffer,
+                              Entity entity,
+                              const Camera &camera) {
     vkao_pipeline_->bind(command_buffer);
 
     auto &mesh = entity.get_component<MeshComponent>().mesh;
@@ -67,15 +69,16 @@ void SimpleRenderSystem::draw(VkCommandBuffer command_buffer, Entity entity) {
     transform.scale = {0.55f, 0.55f, 0.55f};
 
     static int cnt = 0;
-    transform.rotation = {glm::mod(cnt * 0.001f, glm::two_pi<float>()),
-                          glm::mod(cnt * 0.0005f, glm::two_pi<float>()),
+    transform.rotation = {glm::mod(cnt * 0.0005f, glm::two_pi<float>()),
+                          glm::mod(cnt * 0.00025f, glm::two_pi<float>()),
                           0.f};
     cnt++;
 
-    transform.translation = {0.f, 0.f, 0.5f};
+    transform.translation = {0.f, 0.f, 2.5f};
 
     SimplePushConstant push{};
-    push.transform = entity.get_component<TransformComponent>().load_matrix();
+    push.transform = camera.get_projection() *
+                     entity.get_component<TransformComponent>().load_matrix();
 
     vkCmdPushConstants(command_buffer,
                        pipeline_layout_,

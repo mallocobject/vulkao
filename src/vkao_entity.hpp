@@ -67,9 +67,6 @@ class Entity {
         return static_cast<std::uintptr_t>(handle_);
     }
 
-    // True when the handle refers to a live entity. Unlike is_set(), this also
-    // catches handles left behind by Scene::destroy_entity(), which is the
-    // common way an editor panel ends up with a dangling entity.
     bool valid() const {
         return handle_ != entt::null && registry_ != nullptr &&
                registry_->registry().valid(handle_);

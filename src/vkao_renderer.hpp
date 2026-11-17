@@ -38,6 +38,10 @@ class VkaoRenderer : public RefCounted {
         return vkao_swap_chain_->get_render_pass();
     }
 
+    float get_aspect_ratio() const {
+        return vkao_swap_chain_->extent_aspect_ratio();
+    }
+
     VkCommandBuffer begin_frame();
     void end_frame();
     void begin_swap_chain_render_pass(VkCommandBuffer command_buffer);

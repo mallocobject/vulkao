@@ -1,8 +1,10 @@
 #include "first_app.hpp"
 
+#include "glm/trigonometric.hpp"
 #include "logger.hpp"
 #include "ref.hpp"
 #include "simple_render_system.hpp"
+#include "vkao_camera.hpp"
 #include "vkao_component.hpp"
 #include "vulkan/vulkan_core.h"
 #include <vector>
@@ -19,6 +21,8 @@ void FirstApp::run() {
     SimpleRenderSystem render_system{
         vkao_device_, vkao_renderer_.get_swap_chain_render_pass()};
 
+    Camera camera;
+
     while (running_) {
         SDL_Event event;
 
@@ -34,10 +38,15 @@ void FirstApp::run() {
             }
         }
 
+        auto aspect_ratio = vkao_renderer_.get_aspect_ratio();
+        camera.set_perspective_projection(
+            glm::radians(45.f), aspect_ratio, 0.1f, 10.f);
+
         if (auto command_buffer = vkao_renderer_.begin_frame()) {
             vkao_renderer_.begin_swap_chain_render_pass(command_buffer);
             // TODO
-            render_system.draw(command_buffer, entities_.begin()->second);
+            render_system.draw(
+                command_buffer, entities_.begin()->second, camera);
             vkao_renderer_.end_swap_chain_render_pass(command_buffer);
             vkao_renderer_.end_frame();
         }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ref.hpp"
+#include "vkao_camera.hpp"
 #include "vkao_device.hpp"
 #include "vkao_entity.hpp"
 #include "vkao_pipeline.hpp"
@@ -20,7 +21,8 @@ class SimpleRenderSystem {
 
     SimpleRenderSystem(const SimpleRenderSystem &) = delete;
 
-    void draw(VkCommandBuffer command_buffer, Entity entity);
+    void
+    draw(VkCommandBuffer command_buffer, Entity entity, const Camera &camera);
 
   private:
     void create_pipeline_layout();
