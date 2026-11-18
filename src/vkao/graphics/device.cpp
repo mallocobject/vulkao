@@ -1,6 +1,6 @@
-#include "vkao_device.hpp"
+#include "graphics/device.hpp"
 
-#include "logger.hpp"
+#include "core/logger.hpp"
 #include <cstring>
 #include <set>
 #include <unordered_set>
@@ -43,7 +43,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
 } // namespace
 
 // class member functions
-VkaoDevice::VkaoDevice(VkaoWindow &window) : vkao_window_{window} {
+Device::Device(Window &window) : window_{window} {
     create_instance();
     setup_debug_messenger();
     create_surface();
@@ -52,7 +52,7 @@ VkaoDevice::VkaoDevice(VkaoWindow &window) : vkao_window_{window} {
     create_command_pool();
 }
 
-VkaoDevice::~VkaoDevice() {
+Device::~Device() {
     vkDestroyCommandPool(device_, command_pool_, nullptr);
     vkDestroyDevice(device_, nullptr);
 
@@ -64,7 +64,7 @@ VkaoDevice::~VkaoDevice() {
     vkDestroyInstance(instance_, nullptr);
 }
 
-void VkaoDevice::create_instance() {
+void Device::create_instance() {
     VKAO_ASSERT(!enableValidationLayers || check_validation_layer_support(),
                 "validation layers requested, but not available!");
 
@@ -106,7 +106,7 @@ void VkaoDevice::create_instance() {
     has_SDL_required_instance_extensions();
 }
 
-void VkaoDevice::pick_physical_device() {
+void Device::pick_physical_device() {
     uint32_t device_count = 0;
     vkEnumeratePhysicalDevices(instance_, &device_count, nullptr);
     VKAO_ASSERT(device_count, "failed to find GPUs with Vulkan support!");
@@ -131,7 +131,7 @@ void VkaoDevice::pick_physical_device() {
     VKAO_INFO("physical device: {}", properties.deviceName);
 }
 
-void VkaoDevice::create_logical_device() {
+void Device::create_logical_device() {
     QueueFamilyIndices indices = find_queue_families(physical_device_);
 
     std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
@@ -174,7 +174,7 @@ void VkaoDevice::create_logical_device() {
         device_, indices.present_family.value(), 0, &present_queue_);
 }
 
-void VkaoDevice::create_command_pool() {
+void Device::create_command_pool() {
     QueueFamilyIndices queue_family_indices = find_physical_queue_families();
 
     VkCommandPoolCreateInfo pool_info = {};
@@ -188,11 +188,11 @@ void VkaoDevice::create_command_pool() {
                 "failed to create command pool!");
 }
 
-void VkaoDevice::create_surface() {
-    vkao_window_.create_window_surface(instance_, &surface_);
+void Device::create_surface() {
+    window_.create_window_surface(instance_, &surface_);
 }
 
-bool VkaoDevice::is_device_suitable(VkPhysicalDevice device) {
+bool Device::is_device_suitable(VkPhysicalDevice device) {
     QueueFamilyIndices indices = find_queue_families(device);
 
     bool extensions_supported = check_device_extension_support(device);
@@ -212,7 +212,7 @@ bool VkaoDevice::is_device_suitable(VkPhysicalDevice device) {
            swap_chain_adequate && supported_features.samplerAnisotropy;
 }
 
-void VkaoDevice::populate_debug_messenger_create_info(
+void Device::populate_debug_messenger_create_info(
     VkDebugUtilsMessengerCreateInfoEXT &create_info) {
     create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -226,7 +226,7 @@ void VkaoDevice::populate_debug_messenger_create_info(
     create_info.pUserData = nullptr; // Optional
 }
 
-void VkaoDevice::setup_debug_messenger() {
+void Device::setup_debug_messenger() {
     if (!enableValidationLayers) {
         return;
     }
@@ -239,7 +239,7 @@ void VkaoDevice::setup_debug_messenger() {
     }
 }
 
-bool VkaoDevice::check_validation_layer_support() {
+bool Device::check_validation_layer_support() {
     uint32_t layer_count;
     vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
 
@@ -264,7 +264,7 @@ bool VkaoDevice::check_validation_layer_support() {
     return true;
 }
 
-std::vector<const char *> VkaoDevice::get_required_extensions() {
+std::vector<const char *> Device::get_required_extensions() {
     uint32_t extension_count = 0;
     const char *const *extension_names =
         SDL_Vulkan_GetInstanceExtensions(&extension_count);
@@ -279,7 +279,7 @@ std::vector<const char *> VkaoDevice::get_required_extensions() {
     return extensions;
 }
 
-void VkaoDevice::has_SDL_required_instance_extensions() {
+void Device::has_SDL_required_instance_extensions() {
     uint32_t extension_count = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
     std::vector<VkExtensionProperties> extensions(extension_count);
@@ -304,7 +304,7 @@ void VkaoDevice::has_SDL_required_instance_extensions() {
     }
 }
 
-bool VkaoDevice::check_device_extension_support(VkPhysicalDevice device) {
+bool Device::check_device_extension_support(VkPhysicalDevice device) {
     uint32_t extension_count;
     vkEnumerateDeviceExtensionProperties(
         device, nullptr, &extension_count, nullptr);
@@ -323,7 +323,7 @@ bool VkaoDevice::check_device_extension_support(VkPhysicalDevice device) {
     return required_extensions.empty();
 }
 
-QueueFamilyIndices VkaoDevice::find_queue_families(VkPhysicalDevice device) {
+QueueFamilyIndices Device::find_queue_families(VkPhysicalDevice device) {
     QueueFamilyIndices indices;
 
     uint32_t queue_family_count = 0;
@@ -357,7 +357,7 @@ QueueFamilyIndices VkaoDevice::find_queue_families(VkPhysicalDevice device) {
 }
 
 SwapChainSupportDetails
-VkaoDevice::query_swap_chain_support(VkPhysicalDevice device) {
+Device::query_swap_chain_support(VkPhysicalDevice device) {
     SwapChainSupportDetails details;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
         device, surface_, &details.capabilities);
@@ -384,10 +384,9 @@ VkaoDevice::query_swap_chain_support(VkPhysicalDevice device) {
     return details;
 }
 
-VkFormat
-VkaoDevice::find_supported_format(const std::vector<VkFormat> &candidates,
-                                  VkImageTiling tiling,
-                                  VkFormatFeatureFlags features) {
+VkFormat Device::find_supported_format(const std::vector<VkFormat> &candidates,
+                                       VkImageTiling tiling,
+                                       VkFormatFeatureFlags features) {
     for (VkFormat format : candidates) {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(physical_device_, format, &props);
@@ -406,8 +405,8 @@ VkaoDevice::find_supported_format(const std::vector<VkFormat> &candidates,
     return {};
 }
 
-uint32_t VkaoDevice::find_memory_type(uint32_t type_filter,
-                                      VkMemoryPropertyFlags properties) {
+uint32_t Device::find_memory_type(uint32_t type_filter,
+                                  VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties mem_properties;
     vkGetPhysicalDeviceMemoryProperties(physical_device_, &mem_properties);
     for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
@@ -423,11 +422,11 @@ uint32_t VkaoDevice::find_memory_type(uint32_t type_filter,
     return {};
 }
 
-void VkaoDevice::create_buffer(VkDeviceSize size,
-                               VkBufferUsageFlags usage,
-                               VkMemoryPropertyFlags properties,
-                               VkBuffer &buffer,
-                               VkDeviceMemory &buffer_memory) {
+void Device::create_buffer(VkDeviceSize size,
+                           VkBufferUsageFlags usage,
+                           VkMemoryPropertyFlags properties,
+                           VkBuffer &buffer,
+                           VkDeviceMemory &buffer_memory) {
     VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffer_info.size = size;
@@ -450,12 +449,12 @@ void VkaoDevice::create_buffer(VkDeviceSize size,
     VKAO_ASSERT(
         vkAllocateMemory(device_, &alloc_info, nullptr, &buffer_memory) ==
             VK_SUCCESS,
-        "failed to allocate vertex buffer memory!")
+        "failed to allocate vertex buffer memory!");
 
     vkBindBufferMemory(device_, buffer, buffer_memory, 0);
 }
 
-VkCommandBuffer VkaoDevice::begin_single_time_commands() {
+VkCommandBuffer Device::begin_single_time_commands() {
     VkCommandBufferAllocateInfo alloc_info{};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -473,7 +472,7 @@ VkCommandBuffer VkaoDevice::begin_single_time_commands() {
     return command_buffer;
 }
 
-void VkaoDevice::end_single_time_commands(VkCommandBuffer command_buffer) {
+void Device::end_single_time_commands(VkCommandBuffer command_buffer) {
     vkEndCommandBuffer(command_buffer);
 
     VkSubmitInfo submit_info{};
@@ -487,9 +486,9 @@ void VkaoDevice::end_single_time_commands(VkCommandBuffer command_buffer) {
     vkFreeCommandBuffers(device_, command_pool_, 1, &command_buffer);
 }
 
-void VkaoDevice::copy_buffer(VkBuffer src_buffer,
-                             VkBuffer dst_buffer,
-                             VkDeviceSize size) {
+void Device::copy_buffer(VkBuffer src_buffer,
+                         VkBuffer dst_buffer,
+                         VkDeviceSize size) {
     VkCommandBuffer command_buffer = begin_single_time_commands();
 
     VkBufferCopy copy_region{};
@@ -501,11 +500,11 @@ void VkaoDevice::copy_buffer(VkBuffer src_buffer,
     end_single_time_commands(command_buffer);
 }
 
-void VkaoDevice::copy_buffer_to_image(VkBuffer buffer,
-                                      VkImage image,
-                                      uint32_t width,
-                                      uint32_t height,
-                                      uint32_t layer_count) {
+void Device::copy_buffer_to_image(VkBuffer buffer,
+                                  VkImage image,
+                                  uint32_t width,
+                                  uint32_t height,
+                                  uint32_t layer_count) {
     VkCommandBuffer command_buffer = begin_single_time_commands();
 
     VkBufferImageCopy region{};
@@ -530,10 +529,10 @@ void VkaoDevice::copy_buffer_to_image(VkBuffer buffer,
     end_single_time_commands(command_buffer);
 }
 
-void VkaoDevice::create_image_with_info(const VkImageCreateInfo &image_info,
-                                        VkMemoryPropertyFlags properties,
-                                        VkImage &image,
-                                        VkDeviceMemory &image_memory) {
+void Device::create_image_with_info(const VkImageCreateInfo &image_info,
+                                    VkMemoryPropertyFlags properties,
+                                    VkImage &image,
+                                    VkDeviceMemory &image_memory) {
     if (vkCreateImage(device_, &image_info, nullptr, &image) != VK_SUCCESS) {
         throw std::runtime_error("failed to create image!");
     }

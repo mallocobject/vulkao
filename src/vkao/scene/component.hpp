@@ -1,9 +1,9 @@
 #pragma once
 
 #include "glm/ext/matrix_float4x4.hpp"
-#include "math.hpp"
-#include "ref.hpp"
-#include "vkao_mesh.hpp"
+#include "core/math.hpp"
+#include "core/ref.hpp"
+#include "graphics/mesh.hpp"
 #include <cstdint>
 #include <glm/glm.hpp>
 

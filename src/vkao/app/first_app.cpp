@@ -1,13 +1,12 @@
-#include "first_app.hpp"
+#include "app/first_app.hpp"
 
-#include "glm/trigonometric.hpp"
-#include "logger.hpp"
-#include "ref.hpp"
-#include "simple_render_system.hpp"
-#include "vkao_camera.hpp"
-#include "vkao_component.hpp"
-#include "vulkan/vulkan_core.h"
+#include "core/logger.hpp"
+#include "core/ref.hpp"
+#include "graphics/camera.hpp"
+#include "graphics/simple_render_system.hpp"
+#include "scene/component.hpp"
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace vkao {
 FirstApp::FirstApp() {
@@ -18,8 +17,8 @@ FirstApp::~FirstApp() {
 }
 
 void FirstApp::run() {
-    SimpleRenderSystem render_system{
-        vkao_device_, vkao_renderer_.get_swap_chain_render_pass()};
+    SimpleRenderSystem render_system{device_,
+                                     renderer_.get_swap_chain_render_pass()};
 
     Camera camera;
 
@@ -32,27 +31,27 @@ void FirstApp::run() {
                 running_ = false;
                 break;
             case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-                vkao_window_.on_window_resized(event.window.data1,
-                                               event.window.data2);
+                window_.on_window_resized(event.window.data1,
+                                          event.window.data2);
                 break;
             }
         }
 
-        auto aspect_ratio = vkao_renderer_.get_aspect_ratio();
+        auto aspect_ratio = renderer_.get_aspect_ratio();
         camera.set_perspective_projection(
             glm::radians(45.f), aspect_ratio, 0.1f, 10.f);
 
-        if (auto command_buffer = vkao_renderer_.begin_frame()) {
-            vkao_renderer_.begin_swap_chain_render_pass(command_buffer);
+        if (auto command_buffer = renderer_.begin_frame()) {
+            renderer_.begin_swap_chain_render_pass(command_buffer);
             // TODO
             render_system.draw(
                 command_buffer, entities_.begin()->second, camera);
-            vkao_renderer_.end_swap_chain_render_pass(command_buffer);
-            vkao_renderer_.end_frame();
+            renderer_.end_swap_chain_render_pass(command_buffer);
+            renderer_.end_frame();
         }
     }
 
-    vkDeviceWaitIdle(vkao_device_.get_device());
+    vkDeviceWaitIdle(device_.get_device());
 }
 
 void FirstApp::load_entities() {
@@ -111,7 +110,7 @@ void FirstApp::load_entities() {
 
     };
 
-    auto mesh = make_ref<Mesh>(vkao_device_, vertices);
+    auto mesh = make_ref<Mesh>(device_, vertices);
     entity.add_component<MeshComponent>(mesh);
 }
 

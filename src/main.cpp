@@ -1,6 +1,4 @@
-#include "first_app.hpp"
-#include "logger.hpp"
-#include "ref.hpp"
+#include "vkao/vkao.hpp"
 
 using namespace vkao;
 

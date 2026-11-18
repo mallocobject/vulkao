@@ -1,7 +1,7 @@
-#include "vkao_registry.hpp"
+#include "scene/registry.hpp"
 
-#include "vkao_component.hpp"
-#include "vkao_entity.hpp"
+#include "scene/component.hpp"
+#include "scene/entity.hpp"
 
 namespace vkao {
 Registry::~Registry() {

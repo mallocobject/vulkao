@@ -1,21 +1,21 @@
 #pragma once
 
-#include "ref.hpp"
-#include "vkao_device.hpp"
+#include "core/ref.hpp"
+#include "graphics/device.hpp"
 
 namespace vkao {
-class VkaoSwapChain : public RefCounted {
+class SwapChain : public RefCounted {
   public:
     static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
-    VkaoSwapChain(VkaoDevice &device, VkExtent2D window_extent);
-    VkaoSwapChain(VkaoDevice &device,
+    SwapChain(Device &device, VkExtent2D window_extent);
+    SwapChain(Device &device,
                   VkExtent2D window_extent,
-                  const Ref<VkaoSwapChain> &previous);
+                  const Ref<SwapChain> &previous);
 
-    ~VkaoSwapChain();
+    ~SwapChain();
 
-    VkaoSwapChain(const VkaoSwapChain &) = delete;
+    SwapChain(const SwapChain &) = delete;
 
     VkFramebuffer get_frame_buffer(int index) {
         return swap_chain_frame_buffers_[index];
@@ -52,7 +52,7 @@ class VkaoSwapChain : public RefCounted {
     VkResult submit_command_buffers(const VkCommandBuffer *buffers,
                                     uint32_t *image_index);
 
-    bool compare_swap_formats(const VkaoSwapChain &swap_chain) const {
+    bool compare_swap_formats(const SwapChain &swap_chain) const {
         return swap_chain.swap_chain_depth_format_ ==
                    swap_chain_depth_format_ &&
                swap_chain.swap_chain_image_format_ == swap_chain_image_format_;
@@ -87,11 +87,11 @@ class VkaoSwapChain : public RefCounted {
     std::vector<VkImage> swap_chain_images_;
     std::vector<VkImageView> swap_chain_image_views_;
 
-    VkaoDevice &vkao_device_;
+    Device &device_;
     VkExtent2D window_extent_;
 
     VkSwapchainKHR swap_chain_;
-    Ref<VkaoSwapChain> old_swap_chain_;
+    Ref<SwapChain> old_swap_chain_;
 
     std::vector<VkSemaphore> image_available_semaphores_;
     std::vector<VkSemaphore> render_finished_semaphores_;

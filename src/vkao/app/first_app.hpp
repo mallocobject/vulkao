@@ -1,11 +1,11 @@
 #pragma once
 
-#include "ref.hpp"
-#include "vkao_device.hpp"
-#include "vkao_entity.hpp"
-#include "vkao_registry.hpp"
-#include "vkao_renderer.hpp"
-#include "vkao_window.hpp"
+#include "core/ref.hpp"
+#include "graphics/device.hpp"
+#include "graphics/renderer.hpp"
+#include "platform/window.hpp"
+#include "scene/entity.hpp"
+#include "scene/registry.hpp"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <unordered_map>
@@ -27,9 +27,9 @@ class FirstApp : public RefCounted {
   private:
     void load_entities();
 
-    VkaoWindow vkao_window_{WIDTH, HEIGHT, "vulkao"};
-    VkaoDevice vkao_device_{vkao_window_};
-    VkaoRenderer vkao_renderer_{vkao_window_, vkao_device_};
+    Window window_{WIDTH, HEIGHT, "vulkao"};
+    Device device_{window_};
+    Renderer renderer_{window_, device_};
 
     bool running_{true};
 

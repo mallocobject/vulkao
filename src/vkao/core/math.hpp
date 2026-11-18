@@ -1,6 +1,5 @@
 #pragma once
 
-#include "glm/ext/vector_float3.hpp"
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
 

@@ -1,2 +1,2 @@
 CompileFlags:
-  CompilationDatabase: build/clangd
+  CompilationDatabase: build/clangd-release

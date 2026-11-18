@@ -1,12 +1,12 @@
 #pragma once
 
-#include "SDL3/SDL_vulkan.h"
-#include "ref.hpp"
-#include "vkao_window.hpp"
-#include "vulkan/vulkan_core.h"
+#include "core/ref.hpp"
+#include "platform/window.hpp"
+#include <SDL3/SDL_vulkan.h>
 #include <optional>
 #include <vector>
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan_win32.h>
 
 namespace vkao {
@@ -25,7 +25,7 @@ struct SwapChainSupportDetails {
     std::vector<VkPresentModeKHR> presentModes;
 };
 
-class VkaoDevice : public RefCounted {
+class Device : public RefCounted {
   public:
 #if defined(NDEBUG)
     const bool enableValidationLayers = false;
@@ -33,10 +33,10 @@ class VkaoDevice : public RefCounted {
     const bool enableValidationLayers = true;
 #endif
 
-    VkaoDevice(VkaoWindow &window);
-    ~VkaoDevice();
+    Device(Window &window);
+    ~Device();
 
-    VkaoDevice(const VkaoDevice &) = delete;
+    Device(const Device &) = delete;
 
     VkDevice get_device() const {
         return device_;
@@ -119,7 +119,7 @@ class VkaoDevice : public RefCounted {
     bool check_device_extension_support(VkPhysicalDevice device);
     SwapChainSupportDetails query_swap_chain_support(VkPhysicalDevice device);
 
-    VkaoWindow &vkao_window_;
+    Window &window_;
 
     VkInstance instance_;
     VkDebugUtilsMessengerEXT debug_messenger_;

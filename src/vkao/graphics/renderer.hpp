@@ -1,22 +1,22 @@
 #pragma once
 
-#include "logger.hpp"
-#include "ref.hpp"
-#include "vkao_device.hpp"
-#include "vkao_swap_chain.hpp"
-#include "vkao_window.hpp"
-#include "vulkan/vulkan_core.h"
+#include "core/logger.hpp"
+#include "core/ref.hpp"
+#include "graphics/device.hpp"
+#include "graphics/swap_chain.hpp"
+#include "platform/window.hpp"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace vkao {
-class VkaoRenderer : public RefCounted {
+class Renderer : public RefCounted {
   public:
-    VkaoRenderer(VkaoWindow &window, VkaoDevice &device);
-    ~VkaoRenderer();
+    Renderer(Window &window, Device &device);
+    ~Renderer();
 
-    VkaoRenderer(const VkaoRenderer &) = delete;
+    Renderer(const Renderer &) = delete;
 
     bool is_frame_in_progress() const {
         return is_frame_started_;
@@ -35,11 +35,11 @@ class VkaoRenderer : public RefCounted {
     }
 
     VkRenderPass get_swap_chain_render_pass() const {
-        return vkao_swap_chain_->get_render_pass();
+        return swap_chain_->get_render_pass();
     }
 
     float get_aspect_ratio() const {
-        return vkao_swap_chain_->extent_aspect_ratio();
+        return swap_chain_->extent_aspect_ratio();
     }
 
     VkCommandBuffer begin_frame();
@@ -52,9 +52,9 @@ class VkaoRenderer : public RefCounted {
     void free_command_buffers();
     void recreate_swap_chain();
 
-    VkaoWindow &vkao_window_;
-    VkaoDevice &vkao_device_;
-    Ref<VkaoSwapChain> vkao_swap_chain_;
+    Window &window_;
+    Device &device_;
+    Ref<SwapChain> swap_chain_;
     std::vector<VkCommandBuffer> command_buffers_;
 
     uint32_t current_image_index_{0};

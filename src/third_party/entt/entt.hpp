@@ -17609,7 +17609,7 @@ using std::swap;
 
 #endif
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 #ifndef ENTT_ENTITY_ENTITY_HPP
 #define ENTT_ENTITY_ENTITY_HPP
 
@@ -18986,7 +18986,7 @@ private:
 
 // #include "../stl/utility.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 
@@ -19361,7 +19361,7 @@ private:
 
 // #include "../stl/utility.hpp"
 
-// #include "component.hpp"
+// #include "scene/component.hpp"
 #ifndef ENTT_ENTITY_COMPONENT_HPP
 #define ENTT_ENTITY_COMPONENT_HPP
 
@@ -19460,7 +19460,7 @@ struct component_traits {
 
 // #include "../stl/utility.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 
@@ -20779,9 +20779,9 @@ using std::vector;
 
 #endif
 
-// #include "component.hpp"
+// #include "scene/component.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 
@@ -22778,7 +22778,7 @@ template<stl::size_t Len = basic_any<>::length, stl::size_t Align = basic_any<Le
 
 // #include "../stl/vector.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 
@@ -25069,7 +25069,7 @@ private:
 
 // #include "../stl/utility.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 
@@ -29825,7 +29825,7 @@ sink(sigh<Ret(Args...), Allocator> &) -> sink<sigh<Ret(Args...), Allocator>>;
 
 // #include "../stl/vector.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 
@@ -41067,7 +41067,7 @@ private:
 
 // #include "../stl/utility.hpp"
 
-// #include "component.hpp"
+// #include "scene/component.hpp"
 
 // #include "fwd.hpp"
 
@@ -47320,7 +47320,7 @@ struct identity {
 
 // #include "../stl/utility.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 
@@ -47348,7 +47348,7 @@ struct identity {
 
 // #include "../stl/vector.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 
@@ -49103,7 +49103,7 @@ private:
 
 // #include "../stl/vector.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 
@@ -49442,7 +49442,7 @@ private:
 
 // #include "../stl/utility.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 
@@ -49972,7 +49972,7 @@ private:
 
 // #include "../stl/vector.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 
@@ -51066,9 +51066,9 @@ private:
 
 // #include "../stl/vector.hpp"
 
-// #include "component.hpp"
+// #include "scene/component.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 
@@ -52302,7 +52302,7 @@ private:
 
 // #include "../stl/utility.hpp"
 
-// #include "entity.hpp"
+// #include "scene/entity.hpp"
 
 // #include "fwd.hpp"
 

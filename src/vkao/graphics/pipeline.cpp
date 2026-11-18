@@ -1,7 +1,7 @@
-#include "vkao_pipeline.hpp"
+#include "graphics/pipeline.hpp"
 
-#include "logger.hpp"
-#include "vkao_mesh.hpp"
+#include "core/logger.hpp"
+#include "graphics/mesh.hpp"
 #include "vulkan/vulkan_core.h"
 #include <cstdint>
 #include <fstream>
@@ -28,23 +28,23 @@ static std::vector<char> read_file(const std::filesystem::path &filepath) {
 }
 } // namespace
 
-VkaoPipeline::VkaoPipeline(VkaoDevice &device,
+Pipeline::Pipeline(Device &device,
                            const std::filesystem::path &vert_filepath,
                            const std::filesystem::path &frag_filepath,
                            const PipelineConfigInfo &config_info)
-    : vkao_device_{device} {
+    : device_{device} {
     create_graphics_pipeline(vert_filepath, frag_filepath, config_info);
 }
-vkao::VkaoPipeline::~VkaoPipeline() {
+vkao::Pipeline::~Pipeline() {
     vkDestroyShaderModule(
-        vkao_device_.get_device(), frag_shader_module_, nullptr);
+        device_.get_device(), frag_shader_module_, nullptr);
     vkDestroyShaderModule(
-        vkao_device_.get_device(), vert_shader_module_, nullptr);
+        device_.get_device(), vert_shader_module_, nullptr);
 
-    vkDestroyPipeline(vkao_device_.get_device(), graphics_pipeline_, nullptr);
+    vkDestroyPipeline(device_.get_device(), graphics_pipeline_, nullptr);
 }
 
-void VkaoPipeline::create_graphics_pipeline(
+void Pipeline::create_graphics_pipeline(
     const std::filesystem::path &vert_filepath,
     const std::filesystem::path &frag_filepath,
     const PipelineConfigInfo &config_info) {
@@ -109,7 +109,7 @@ void VkaoPipeline::create_graphics_pipeline(
     pipeline_info.basePipelineHandle = VK_NULL_HANDLE; // Optional
     pipeline_info.basePipelineIndex = -1;              // Optional
 
-    VKAO_ASSERT(vkCreateGraphicsPipelines(vkao_device_.get_device(),
+    VKAO_ASSERT(vkCreateGraphicsPipelines(device_.get_device(),
                                           VK_NULL_HANDLE,
                                           1,
                                           &pipeline_info,
@@ -118,26 +118,26 @@ void VkaoPipeline::create_graphics_pipeline(
                 "failed to create graphics pipeline!");
 }
 
-void VkaoPipeline::create_shader_module(const std::vector<char> &code,
+void Pipeline::create_shader_module(const std::vector<char> &code,
                                         VkShaderModule *shader_module) {
     VkShaderModuleCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     create_info.codeSize = code.size();
     create_info.pCode = reinterpret_cast<const uint32_t *>(code.data());
 
-    VKAO_ASSERT(vkCreateShaderModule(vkao_device_.get_device(),
+    VKAO_ASSERT(vkCreateShaderModule(device_.get_device(),
                                      &create_info,
                                      nullptr,
                                      shader_module) == VK_SUCCESS,
                 "failed to create shader module!");
 }
 
-void VkaoPipeline::bind(VkCommandBuffer command_buffer) {
+void Pipeline::bind(VkCommandBuffer command_buffer) {
     vkCmdBindPipeline(
         command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline_);
 }
 
-void VkaoPipeline::create_default_pipeline_config_info(
+void Pipeline::create_default_pipeline_config_info(
     PipelineConfigInfo &config_info) {
 
     config_info.input_assembly_info.sType =

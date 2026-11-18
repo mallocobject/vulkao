@@ -1,9 +1,9 @@
 #pragma once
 
-#include "entt.hpp"
-#include "vkao_component.hpp"
-#include "vkao_registry.hpp"
+#include "scene/component.hpp"
+#include "scene/registry.hpp"
 #include <cstdint>
+#include <entt/entt.hpp>
 #include <string>
 #include <vector>
 

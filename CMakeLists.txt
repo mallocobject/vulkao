@@ -19,7 +19,11 @@ file(GLOB_RECURSE VULKAO_SOURCES CONFIGURE_DEPENDS
 
 add_executable(vulkao ${VULKAO_SOURCES})
 
-target_include_directories(vulkao PRIVATE D:/sdk/VulkanSDK/1.4.363.1/Include)
+target_include_directories(vulkao PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/vkao"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/third_party"
+    D:/sdk/VulkanSDK/1.4.363.1/Include
+)
 target_link_directories(vulkao PRIVATE D:/sdk/VulkanSDK/1.4.363.1/Lib)
 target_link_libraries(vulkao PRIVATE SDL3 vulkan-1)
 

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "ref.hpp"
-#include "vkao_device.hpp"
-#include "vulkan/vulkan_core.h"
+#include "core/ref.hpp"
+#include "graphics/device.hpp"
 #include <filesystem>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace vkao {
 struct PipelineConfigInfo {
@@ -27,15 +27,15 @@ struct PipelineConfigInfo {
     uint32_t subpass{0};
 };
 
-class VkaoPipeline : public RefCounted {
+class Pipeline : public RefCounted {
   public:
-    VkaoPipeline(VkaoDevice &device,
-                 const std::filesystem::path &vert_filepath,
-                 const std::filesystem::path &frag_filepath,
-                 const PipelineConfigInfo &config_info);
-    ~VkaoPipeline();
+    Pipeline(Device &device,
+             const std::filesystem::path &vert_filepath,
+             const std::filesystem::path &frag_filepath,
+             const PipelineConfigInfo &config_info);
+    ~Pipeline();
 
-    VkaoPipeline(const VkaoPipeline &) = delete;
+    Pipeline(const Pipeline &) = delete;
 
     void bind(VkCommandBuffer command_buffer);
 
@@ -50,7 +50,7 @@ class VkaoPipeline : public RefCounted {
     void create_shader_module(const std::vector<char> &code,
                               VkShaderModule *shader_module);
 
-    VkaoDevice &vkao_device_;
+    Device &device_;
     VkPipeline graphics_pipeline_;
     VkShaderModule vert_shader_module_;
     VkShaderModule frag_shader_module_;

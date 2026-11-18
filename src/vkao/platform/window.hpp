@@ -1,21 +1,21 @@
 #pragma once
 
-#include "ref.hpp"
-#include "vulkan/vulkan_core.h"
+#include "core/ref.hpp"
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <vulkan/vulkan_core.h>
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
 namespace vkao {
-class VkaoWindow : public RefCounted {
+class Window : public RefCounted {
   public:
-    VkaoWindow(uint32_t w, uint32_t h, std::string_view name);
-    ~VkaoWindow();
+    Window(uint32_t w, uint32_t h, std::string_view name);
+    ~Window();
 
-    VkaoWindow(const VkaoWindow &) = delete;
+    Window(const Window &) = delete;
 
     VkExtent2D get_extent() const {
         return {width_, height_};

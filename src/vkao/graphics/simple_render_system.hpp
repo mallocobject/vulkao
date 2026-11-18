@@ -1,12 +1,12 @@
 #pragma once
 
-#include "ref.hpp"
-#include "vkao_camera.hpp"
-#include "vkao_device.hpp"
-#include "vkao_entity.hpp"
-#include "vkao_pipeline.hpp"
-#include "vulkan/vulkan_core.h"
+#include "core/ref.hpp"
+#include "graphics/camera.hpp"
+#include "graphics/device.hpp"
+#include "graphics/pipeline.hpp"
+#include "scene/entity.hpp"
 #include <glm/glm.hpp>
+#include <vulkan/vulkan_core.h>
 
 namespace vkao {
 struct SimplePushConstant {
@@ -16,7 +16,7 @@ static_assert(sizeof(SimplePushConstant) == 64);
 
 class SimpleRenderSystem {
   public:
-    SimpleRenderSystem(VkaoDevice &device, VkRenderPass render_pass);
+    SimpleRenderSystem(Device &device, VkRenderPass render_pass);
     ~SimpleRenderSystem();
 
     SimpleRenderSystem(const SimpleRenderSystem &) = delete;
@@ -28,9 +28,9 @@ class SimpleRenderSystem {
     void create_pipeline_layout();
     void create_pipeline(VkRenderPass render_pass);
 
-    VkaoDevice &vkao_device_;
+    Device &device_;
 
-    Ref<VkaoPipeline> vkao_pipeline_;
+    Ref<Pipeline> pipeline_;
     VkPipelineLayout pipeline_layout_;
 };
 } // namespace vkao

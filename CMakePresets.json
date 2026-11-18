@@ -1,21 +1,35 @@
 {
-  "version": 6,
-  "configurePresets": [
-    {
-      "name": "clangd",
-      "displayName": "clangd compile database (Ninja, Debug)",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/clangd",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-      }
-    }
-  ],
-  "buildPresets": [
-    {
-      "name": "clangd",
-      "configurePreset": "clangd"
-    }
-  ]
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "clangd-debug",
+            "displayName": "clangd compile database (Ninja, Debug)",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/clangd-debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "clangd-release",
+            "displayName": "clangd compile database (Ninja, Release)",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/clangd-release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "clangd-debug",
+            "configurePreset": "clangd-debug"
+        },
+        {
+            "name": "clangd-release",
+            "configurePreset": "clangd-release"
+        }
+    ]
 }

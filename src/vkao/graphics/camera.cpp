@@ -1,4 +1,4 @@
-#include "vkao_camera.hpp"
+#include "graphics/camera.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
 
 namespace vkao {

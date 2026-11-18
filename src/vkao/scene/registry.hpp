@@ -1,7 +1,7 @@
 #pragma once
 
-#include "entt.hpp"
-#include "ref.hpp"
+#include "core/ref.hpp"
+#include <entt/entt.hpp>
 
 namespace vkao {
 class Entity;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ref.hpp"
-#include "vkao_device.hpp"
+#include "core/ref.hpp"
+#include "graphics/device.hpp"
 #include <glm/glm.hpp>
 #include <vulkan/vulkan_core.h>
 
@@ -20,7 +20,7 @@ struct Vertex {
 
 class Mesh : public RefCounted {
   public:
-    Mesh(VkaoDevice &device, const std::vector<Vertex> &vertices);
+    Mesh(Device &device, const std::vector<Vertex> &vertices);
     ~Mesh();
 
     Mesh(const Mesh &) = delete;
@@ -31,7 +31,7 @@ class Mesh : public RefCounted {
   private:
     void create_vertex_buffers(const std::vector<Vertex> &vertices);
 
-    VkaoDevice &vkao_device_;
+    Device &device_;
     VkBuffer vertex_buffer_;
     VkDeviceMemory vertex_buffer_memory_;
     uint32_t vertex_count_;

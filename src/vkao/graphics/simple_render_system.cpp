@@ -1,24 +1,22 @@
-#include "simple_render_system.hpp"
+#include "graphics/simple_render_system.hpp"
 
+#include "core/logger.hpp"
+#include "core/ref.hpp"
 #include "glm/gtc/constants.hpp"
-#include "logger.hpp"
-#include "ref.hpp"
-#include "vkao_component.hpp"
-#include "vkao_pipeline.hpp"
-#include "vulkan/vulkan_core.h"
+#include "graphics/pipeline.hpp"
+#include "scene/component.hpp"
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace vkao {
-SimpleRenderSystem::SimpleRenderSystem(VkaoDevice &device,
-                                       VkRenderPass render_pass)
-    : vkao_device_(device) {
+SimpleRenderSystem::SimpleRenderSystem(Device &device, VkRenderPass render_pass)
+    : device_(device) {
     create_pipeline_layout();
     create_pipeline(render_pass);
 }
 
 SimpleRenderSystem::~SimpleRenderSystem() {
-    vkDestroyPipelineLayout(
-        vkao_device_.get_device(), pipeline_layout_, nullptr);
+    vkDestroyPipelineLayout(device_.get_device(), pipeline_layout_, nullptr);
 }
 
 void SimpleRenderSystem::create_pipeline_layout() {
@@ -35,7 +33,7 @@ void SimpleRenderSystem::create_pipeline_layout() {
     pipeline_layout_info.pushConstantRangeCount = 1;
     pipeline_layout_info.pPushConstantRanges = &push_constant_range;
 
-    VKAO_ASSERT(vkCreatePipelineLayout(vkao_device_.get_device(),
+    VKAO_ASSERT(vkCreatePipelineLayout(device_.get_device(),
                                        &pipeline_layout_info,
                                        nullptr,
                                        &pipeline_layout_) == VK_SUCCESS,
@@ -48,18 +46,18 @@ void SimpleRenderSystem::create_pipeline(VkRenderPass render_pass) {
 
     PipelineConfigInfo config_info{};
 
-    VkaoPipeline::create_default_pipeline_config_info(config_info);
+    Pipeline::create_default_pipeline_config_info(config_info);
 
     config_info.pipeline_layout = pipeline_layout_;
     config_info.render_pass = render_pass;
-    vkao_pipeline_ = make_ref<VkaoPipeline>(
-        vkao_device_, "shader.vert.spv", "shader.frag.spv", config_info);
+    pipeline_ = make_ref<Pipeline>(
+        device_, "shader.vert.spv", "shader.frag.spv", config_info);
 }
 
 void SimpleRenderSystem::draw(VkCommandBuffer command_buffer,
                               Entity entity,
                               const Camera &camera) {
-    vkao_pipeline_->bind(command_buffer);
+    pipeline_->bind(command_buffer);
 
     auto &mesh = entity.get_component<MeshComponent>().mesh;
 
