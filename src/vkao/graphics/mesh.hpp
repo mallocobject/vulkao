@@ -2,7 +2,9 @@
 
 #include "core/ref.hpp"
 #include "graphics/device.hpp"
+#include <cstdint>
 #include <glm/glm.hpp>
+#include <vector>
 #include <vulkan/vulkan_core.h>
 
 namespace vkao {
@@ -20,7 +22,12 @@ struct Vertex {
 
 class Mesh : public RefCounted {
   public:
-    Mesh(Device &device, const std::vector<Vertex> &vertices);
+    struct Builder {
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+    };
+
+    Mesh(Device &device, const Builder &builder);
     ~Mesh();
 
     Mesh(const Mesh &) = delete;
@@ -30,10 +37,17 @@ class Mesh : public RefCounted {
 
   private:
     void create_vertex_buffers(const std::vector<Vertex> &vertices);
+    void create_index_buffers(const std::vector<uint32_t> &indices);
 
     Device &device_;
+
     VkBuffer vertex_buffer_;
     VkDeviceMemory vertex_buffer_memory_;
     uint32_t vertex_count_;
+
+    VkBuffer index_buffer_;
+    VkDeviceMemory index_buffer_memory_;
+    uint32_t index_count_;
+    bool has_index_buffer_{false};
 };
 } // namespace vkao
