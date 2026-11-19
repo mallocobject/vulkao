@@ -29,17 +29,15 @@ static std::vector<char> read_file(const std::filesystem::path &filepath) {
 } // namespace
 
 Pipeline::Pipeline(Device &device,
-                           const std::filesystem::path &vert_filepath,
-                           const std::filesystem::path &frag_filepath,
-                           const PipelineConfigInfo &config_info)
+                   const std::filesystem::path &vert_filepath,
+                   const std::filesystem::path &frag_filepath,
+                   const PipelineConfigInfo &config_info)
     : device_{device} {
     create_graphics_pipeline(vert_filepath, frag_filepath, config_info);
 }
 vkao::Pipeline::~Pipeline() {
-    vkDestroyShaderModule(
-        device_.get_device(), frag_shader_module_, nullptr);
-    vkDestroyShaderModule(
-        device_.get_device(), vert_shader_module_, nullptr);
+    vkDestroyShaderModule(device_.get_device(), frag_shader_module_, nullptr);
+    vkDestroyShaderModule(device_.get_device(), vert_shader_module_, nullptr);
 
     vkDestroyPipeline(device_.get_device(), graphics_pipeline_, nullptr);
 }
@@ -75,8 +73,8 @@ void Pipeline::create_graphics_pipeline(
     shader_stage_infos[1].module = frag_shader_module_;
     shader_stage_infos[1].pName = "main";
 
-    auto binding_descriptions = Vertex::get_binding_description();
-    auto attribute_descriptions = Vertex::get_attribute_description();
+    auto binding_descriptions = Mesh::Vertex::get_binding_description();
+    auto attribute_descriptions = Mesh::Vertex::get_attribute_description();
     VkPipelineVertexInputStateCreateInfo vertex_input_info{};
     vertex_input_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -119,7 +117,7 @@ void Pipeline::create_graphics_pipeline(
 }
 
 void Pipeline::create_shader_module(const std::vector<char> &code,
-                                        VkShaderModule *shader_module) {
+                                    VkShaderModule *shader_module) {
     VkShaderModuleCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     create_info.codeSize = code.size();
@@ -159,8 +157,8 @@ void Pipeline::create_default_pipeline_config_info(
     config_info.rasterization_info.rasterizerDiscardEnable = VK_FALSE;
     config_info.rasterization_info.polygonMode = VK_POLYGON_MODE_FILL;
     config_info.rasterization_info.lineWidth = 1.f;
-    config_info.rasterization_info.cullMode = VK_CULL_MODE_NONE;
-    config_info.rasterization_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    config_info.rasterization_info.cullMode = VK_CULL_MODE_BACK_BIT;
+    config_info.rasterization_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     config_info.rasterization_info.depthBiasEnable = VK_FALSE;
     config_info.rasterization_info.depthBiasConstantFactor = 0.f; // Optional
     config_info.rasterization_info.depthBiasClamp = 0.f;          // Optional

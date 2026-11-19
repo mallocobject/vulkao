@@ -83,96 +83,11 @@ void FirstApp::load_entities() {
     auto entity = registry_.create_entity();
     entities_[entity.get_component<IdComponent>().id] = entity;
 
-    // Triangle list: two triangles per face. normal stores RGB; uv is unused.
-    Mesh::Builder builder;
-    builder.vertices = {
-        // +X: red
-        {{0.5f, -0.5f, 0.5f}, {1.f, 0.f, 0.f}, {0.f, 0.f}},  // 0
-        {{0.5f, -0.5f, -0.5f}, {1.f, 0.f, 0.f}, {0.f, 0.f}}, // 1
-        {{0.5f, 0.5f, -0.5f}, {1.f, 0.f, 0.f}, {0.f, 0.f}},  // 2
-        {{0.5f, 0.5f, 0.5f}, {1.f, 0.f, 0.f}, {0.f, 0.f}},   // 3
-
-        // -X: cyan
-        {{-0.5f, -0.5f, -0.5f}, {0.f, 1.f, 1.f}, {0.f, 0.f}}, // 4
-        {{-0.5f, -0.5f, 0.5f}, {0.f, 1.f, 1.f}, {0.f, 0.f}},  // 5
-        {{-0.5f, 0.5f, 0.5f}, {0.f, 1.f, 1.f}, {0.f, 0.f}},   // 6
-        {{-0.5f, 0.5f, -0.5f}, {0.f, 1.f, 1.f}, {0.f, 0.f}},  // 7
-
-        // +Y: green
-        {{-0.5f, 0.5f, 0.5f}, {0.f, 1.f, 0.f}, {0.f, 0.f}},  // 8
-        {{0.5f, 0.5f, 0.5f}, {0.f, 1.f, 0.f}, {0.f, 0.f}},   // 9
-        {{0.5f, 0.5f, -0.5f}, {0.f, 1.f, 0.f}, {0.f, 0.f}},  // 10
-        {{-0.5f, 0.5f, -0.5f}, {0.f, 1.f, 0.f}, {0.f, 0.f}}, // 11
-
-        // -Y: magenta
-        {{-0.5f, -0.5f, -0.5f}, {1.f, 0.f, 1.f}, {0.f, 0.f}}, // 12
-        {{0.5f, -0.5f, -0.5f}, {1.f, 0.f, 1.f}, {0.f, 0.f}},  // 13
-        {{0.5f, -0.5f, 0.5f}, {1.f, 0.f, 1.f}, {0.f, 0.f}},   // 14
-        {{-0.5f, -0.5f, 0.5f}, {1.f, 0.f, 1.f}, {0.f, 0.f}},  // 15
-
-        // +Z: blue
-        {{-0.5f, -0.5f, 0.5f}, {0.f, 0.f, 1.f}, {0.f, 0.f}}, // 16
-        {{0.5f, -0.5f, 0.5f}, {0.f, 0.f, 1.f}, {0.f, 0.f}},  // 17
-        {{0.5f, 0.5f, 0.5f}, {0.f, 0.f, 1.f}, {0.f, 0.f}},   // 18
-        {{-0.5f, 0.5f, 0.5f}, {0.f, 0.f, 1.f}, {0.f, 0.f}},  // 19
-
-        // -Z: yellow
-        {{0.5f, -0.5f, -0.5f}, {1.f, 1.f, 0.f}, {0.f, 0.f}},  // 20
-        {{-0.5f, -0.5f, -0.5f}, {1.f, 1.f, 0.f}, {0.f, 0.f}}, // 21
-        {{-0.5f, 0.5f, -0.5f}, {1.f, 1.f, 0.f}, {0.f, 0.f}},  // 22
-        {{0.5f, 0.5f, -0.5f}, {1.f, 1.f, 0.f}, {0.f, 0.f}},   // 23
-    };
-
-    builder.indices = {
-        // +X
-        0,
-        1,
-        2,
-        0,
-        2,
-        3,
-        // -X
-        4,
-        5,
-        6,
-        4,
-        6,
-        7,
-        // +Y
-        8,
-        9,
-        10,
-        8,
-        10,
-        11,
-        // -Y
-        12,
-        13,
-        14,
-        12,
-        14,
-        15,
-        // +Z
-        16,
-        17,
-        18,
-        16,
-        18,
-        19,
-        // -Z
-        20,
-        21,
-        22,
-        20,
-        22,
-        23,
-    };
-
     auto &transform = entity.get_component<TransformComponent>();
     transform.scale = {0.55f, 0.55f, 0.55f};
     transform.translation = {0.f, 0.f, 2.5f};
 
-    auto mesh = make_ref<Mesh>(device_, builder);
+    auto mesh = Mesh::create(device_, ASSETS "/models/colored_cube.obj");
     entity.add_component<MeshComponent>(mesh);
 }
 

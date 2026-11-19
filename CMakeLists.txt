@@ -30,6 +30,8 @@ target_link_libraries(vulkao PRIVATE SDL3 vulkan-1)
 target_compile_definitions(vulkao PRIVATE
     GLM_FORCE_RADIANS
     GLM_FORCE_DEPTH_ZERO_TO_ONE
+
+    ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/"
 )
 
 vulkao_add_shaders(vulkao
