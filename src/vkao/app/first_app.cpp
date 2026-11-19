@@ -2,14 +2,23 @@
 
 #include "core/logger.hpp"
 #include "core/ref.hpp"
+#include "glm/ext/vector_float3.hpp"
+#include "glm/trigonometric.hpp"
 #include "graphics/camera.hpp"
+#include "graphics/camera_controller.hpp"
 #include "graphics/simple_render_system.hpp"
 #include "scene/component.hpp"
+#include <chrono>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
 namespace vkao {
 FirstApp::FirstApp() {
+    viewer_ = registry_.create_entity();
+    auto &transform = viewer_.get_component<TransformComponent>();
+    transform.translation = glm::vec3{0.f, 0.f, -1.f};
+    transform.rotation = glm::vec3{0.f, 0.f, 0.f};
+
     load_entities();
 }
 
@@ -21,6 +30,8 @@ void FirstApp::run() {
                                      renderer_.get_swap_chain_render_pass()};
 
     Camera camera;
+
+    CameraController camera_controller;
 
     while (running_) {
         SDL_Event event;
@@ -37,9 +48,21 @@ void FirstApp::run() {
             }
         }
 
+        static auto last = std::chrono::steady_clock::now();
+        auto now = std::chrono::steady_clock::now();
+        float dt = std::chrono::duration<float>(now - last).count();
+        last = now;
+        // update camera
+        camera_controller.rotate_around_X_and_Y(
+            window_.get_window(), dt, viewer_);
+        camera_controller.move_in_plane_XZ(window_.get_window(), dt, viewer_);
+
+        auto &transform = viewer_.get_component<TransformComponent>();
+        camera.set_view_YXZ(transform.translation, transform.rotation);
+
         auto aspect_ratio = renderer_.get_aspect_ratio();
         camera.set_perspective_projection(
-            glm::radians(45.f), aspect_ratio, 0.1f, 10.f);
+            glm::radians(45.f), aspect_ratio, 0.1f, 1000.f);
 
         if (auto command_buffer = renderer_.begin_frame()) {
             renderer_.begin_swap_chain_render_pass(command_buffer);
@@ -109,6 +132,10 @@ void FirstApp::load_entities() {
         {{0.5f, 0.5f, -0.5f}, {1.f, 1.f, 0.f}, {0.f, 0.f}},
 
     };
+
+    auto &transform = entity.get_component<TransformComponent>();
+    transform.scale = {0.55f, 0.55f, 0.55f};
+    transform.translation = {0.f, 0.f, 2.5f};
 
     auto mesh = make_ref<Mesh>(device_, vertices);
     entity.add_component<MeshComponent>(mesh);

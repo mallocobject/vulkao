@@ -2,6 +2,7 @@
 
 #include "core/logger.hpp"
 #include "core/ref.hpp"
+#include "glm/ext/vector_float3.hpp"
 #include "glm/gtc/constants.hpp"
 #include "graphics/pipeline.hpp"
 #include "scene/component.hpp"
@@ -59,24 +60,11 @@ void SimpleRenderSystem::draw(VkCommandBuffer command_buffer,
                               const Camera &camera) {
     pipeline_->bind(command_buffer);
 
-    auto &mesh = entity.get_component<MeshComponent>().mesh;
-
-    mesh->bind(command_buffer);
-
-    auto &transform = entity.get_component<TransformComponent>();
-    transform.scale = {0.55f, 0.55f, 0.55f};
-
-    static int cnt = 0;
-    transform.rotation = {glm::mod(cnt * 0.0005f, glm::two_pi<float>()),
-                          glm::mod(cnt * 0.00025f, glm::two_pi<float>()),
-                          0.f};
-    cnt++;
-
-    transform.translation = {0.f, 0.f, 2.5f};
+    auto proj_view = camera.get_projection() * camera.get_view();
 
     SimplePushConstant push{};
-    push.transform = camera.get_projection() *
-                     entity.get_component<TransformComponent>().load_matrix();
+    push.transform =
+        proj_view * entity.get_component<TransformComponent>().load_matrix();
 
     vkCmdPushConstants(command_buffer,
                        pipeline_layout_,
@@ -86,6 +74,9 @@ void SimpleRenderSystem::draw(VkCommandBuffer command_buffer,
                        sizeof(SimplePushConstant),
                        &push);
 
+    auto &mesh = entity.get_component<MeshComponent>().mesh;
+
+    mesh->bind(command_buffer);
     mesh->draw(command_buffer);
 }
 

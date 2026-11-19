@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SDL3/SDL_video.h"
 #include "core/ref.hpp"
 #include <cstdint>
 #include <string>
@@ -32,6 +33,10 @@ class Window : public RefCounted {
     }
 
     void create_window_surface(VkInstance instance, VkSurfaceKHR *surface);
+
+    SDL_Window *get_window() const {
+        return window_;
+    }
 
   private:
     void init_window();
