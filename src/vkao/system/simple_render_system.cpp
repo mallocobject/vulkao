@@ -1,4 +1,4 @@
-#include "graphics/simple_render_system.hpp"
+#include "system/simple_render_system.hpp"
 
 #include "core/logger.hpp"
 #include "core/ref.hpp"
@@ -10,6 +10,12 @@
 #include <vulkan/vulkan_core.h>
 
 namespace vkao {
+struct SimplePushConstant {
+    alignas(16) glm::mat4 transform{1.f};
+    alignas(16) glm::mat4 normal_matrix{1.f};
+};
+static_assert(sizeof(SimplePushConstant) == 128);
+
 SimpleRenderSystem::SimpleRenderSystem(Device &device, VkRenderPass render_pass)
     : device_(device) {
     create_pipeline_layout();
@@ -55,19 +61,18 @@ void SimpleRenderSystem::create_pipeline(VkRenderPass render_pass) {
         device_, "shader.vert.spv", "shader.frag.spv", config_info);
 }
 
-void SimpleRenderSystem::draw(VkCommandBuffer command_buffer,
-                              Entity entity,
-                              const Camera &camera) {
-    pipeline_->bind(command_buffer);
+void SimpleRenderSystem::draw(FrameInfo &frame_info, Entity entity) {
+    pipeline_->bind(frame_info.command_buffer);
 
-    auto proj_view = camera.get_projection() * camera.get_view();
+    auto proj_view =
+        frame_info.camera.get_projection() * frame_info.camera.get_view();
 
     auto &tf = entity.get_component<TransformComponent>();
     SimplePushConstant push{};
     push.transform = proj_view * tf.model_matrix();
     push.normal_matrix = glm::mat4{tf.normal_matrix()};
 
-    vkCmdPushConstants(command_buffer,
+    vkCmdPushConstants(frame_info.command_buffer,
                        pipeline_layout_,
                        VK_SHADER_STAGE_VERTEX_BIT |
                            VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -77,8 +82,8 @@ void SimpleRenderSystem::draw(VkCommandBuffer command_buffer,
 
     auto &mesh = entity.get_component<MeshComponent>().mesh;
 
-    mesh->bind(command_buffer);
-    mesh->draw(command_buffer);
+    mesh->bind(frame_info.command_buffer);
+    mesh->draw(frame_info.command_buffer);
 }
 
 } // namespace vkao

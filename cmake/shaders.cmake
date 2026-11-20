@@ -11,7 +11,7 @@ function(vulkao_add_shaders target)
         message(FATAL_ERROR "vulkao_add_shaders: target '${target}' does not exist.")
     endif()
 
-    set(out_dir "${CMAKE_CURRENT_BINARY_DIR}/shaders")
+    set(out_dir "${CMAKE_CURRENT_BINARY_DIR}/shader")
     file(MAKE_DIRECTORY "${out_dir}")
 
     set(spv_files "")
@@ -33,8 +33,8 @@ function(vulkao_add_shaders target)
         list(APPEND spv_files "${out}")
     endforeach()
 
-    add_custom_target(${target}_shaders DEPENDS ${spv_files})
-    add_dependencies(${target} ${target}_shaders)
+    add_custom_target(${target}_shader DEPENDS ${spv_files})
+    add_dependencies(${target} ${target}_shader)
 
     add_custom_command(TARGET ${target} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different

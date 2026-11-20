@@ -18,7 +18,7 @@ class FirstApp : public RefCounted {
     static constexpr uint32_t HEIGHT = 600;
 
     FirstApp();
-    ~FirstApp();
+    ~FirstApp() = default;
 
     FirstApp(const FirstApp &) = delete;
 

@@ -4,6 +4,7 @@
 #include "core/ref.hpp"
 #include "core/utils.hpp"
 #include "glm/ext/vector_float3.hpp"
+#include "graphics/buffer.hpp"
 #include "graphics/device.hpp"
 #include "mesh.hpp"
 #include "vulkan/vulkan_core.h"
@@ -121,49 +122,35 @@ Mesh::Mesh(Device &device, const Builder &builder) : device_(device) {
     create_index_buffers(builder.indices);
 }
 
-Mesh::~Mesh() {
-    vkDestroyBuffer(device_.get_device(), vertex_buffer_, nullptr);
-    vkFreeMemory(device_.get_device(), vertex_buffer_memory_, nullptr);
-
-    if (has_index_buffer_) {
-        vkDestroyBuffer(device_.get_device(), index_buffer_, nullptr);
-        vkFreeMemory(device_.get_device(), index_buffer_memory_, nullptr);
-    }
-}
-
 void Mesh::create_vertex_buffers(const std::vector<Vertex> &vertices) {
     vertex_count_ = static_cast<uint32_t>(vertices.size());
     VKAO_ASSERT(vertex_count_ >= 3, "vertex count must be at least 3!");
 
-    VkDeviceSize buffer_size = sizeof(vertices[0]) * vertex_count_;
+    uint32_t vertex_size = sizeof(vertices[0]);
+    VkDeviceSize buffer_size = vertex_size * vertex_count_;
 
-    VkBuffer staging_buffer;
-    VkDeviceMemory staging_buffer_memory;
+    Buffer staging_buffer{
+        device_,
+        vertex_size,
+        vertex_count_,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    };
 
-    device_.create_buffer(buffer_size,
-                          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                          staging_buffer,
-                          staging_buffer_memory);
+    staging_buffer.map();
+    staging_buffer.write_to_buffer(
+        reinterpret_cast<const void *>(vertices.data()));
 
-    void *data{};
-    vkMapMemory(
-        device_.get_device(), staging_buffer_memory, 0, buffer_size, 0, &data);
-    memcpy(data, vertices.data(), static_cast<size_t>(buffer_size));
-    vkUnmapMemory(device_.get_device(), staging_buffer_memory);
+    vertex_buffer_ = make_ref<Buffer>(device_,
+                                      vertex_size,
+                                      vertex_count_,
+                                      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                                          VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    device_.create_buffer(buffer_size,
-                          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-                              VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                          vertex_buffer_,
-                          vertex_buffer_memory_);
-
-    device_.copy_buffer(staging_buffer, vertex_buffer_, buffer_size);
-
-    vkDestroyBuffer(device_.get_device(), staging_buffer, nullptr);
-    vkFreeMemory(device_.get_device(), staging_buffer_memory, nullptr);
+    device_.copy_buffer(
+        staging_buffer.get_buffer(), vertex_buffer_->get_buffer(), buffer_size);
 }
 
 void Mesh::create_index_buffers(const std::vector<uint32_t> &indices) {
@@ -173,45 +160,43 @@ void Mesh::create_index_buffers(const std::vector<uint32_t> &indices) {
         return;
     }
 
-    VkDeviceSize buffer_size = sizeof(indices[0]) * index_count_;
+    uint32_t index_size = sizeof(indices[0]);
+    VkDeviceSize buffer_size = index_size * index_count_;
 
-    VkBuffer staging_buffer;
-    VkDeviceMemory staging_buffer_memory;
+    Buffer staging_buffer{
+        device_,
+        index_size,
+        index_count_,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    };
 
-    device_.create_buffer(buffer_size,
-                          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                          staging_buffer,
-                          staging_buffer_memory);
+    staging_buffer.map();
+    staging_buffer.write_to_buffer(
+        reinterpret_cast<const void *>(indices.data()));
 
-    void *data{};
-    vkMapMemory(
-        device_.get_device(), staging_buffer_memory, 0, buffer_size, 0, &data);
-    memcpy(data, indices.data(), static_cast<size_t>(buffer_size));
-    vkUnmapMemory(device_.get_device(), staging_buffer_memory);
+    index_buffer_ = make_ref<Buffer>(device_,
+                                     index_size,
+                                     index_count_,
+                                     VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                                         VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    device_.create_buffer(buffer_size,
-                          VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-                              VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                          index_buffer_,
-                          index_buffer_memory_);
-
-    device_.copy_buffer(staging_buffer, index_buffer_, buffer_size);
-
-    vkDestroyBuffer(device_.get_device(), staging_buffer, nullptr);
-    vkFreeMemory(device_.get_device(), staging_buffer_memory, nullptr);
+    device_.copy_buffer(
+        staging_buffer.get_buffer(), index_buffer_->get_buffer(), buffer_size);
 }
 
 void Mesh::bind(VkCommandBuffer command_buffer) {
-    VkBuffer buffers[]{vertex_buffer_};
+    VkBuffer buffers[]{vertex_buffer_->get_buffer()};
     VkDeviceSize offsets[]{0};
     vkCmdBindVertexBuffers(command_buffer, 0, 1, buffers, offsets);
 
     if (has_index_buffer_) {
-        vkCmdBindIndexBuffer(
-            command_buffer, index_buffer_, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(command_buffer,
+                             index_buffer_->get_buffer(),
+                             0,
+                             VK_INDEX_TYPE_UINT32);
     }
 }
 
