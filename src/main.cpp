@@ -3,7 +3,6 @@
 using namespace vkao;
 
 int main() {
-    VKAO_ASSERT(true, "assert");
     FirstApp app;
     app.run();
 }

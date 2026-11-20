@@ -6,19 +6,22 @@
 #include "glm/gtc/constants.hpp"
 #include "graphics/pipeline.hpp"
 #include "scene/component.hpp"
+#include <cstdint>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
 namespace vkao {
 struct SimplePushConstant {
-    alignas(16) glm::mat4 transform{1.f};
+    alignas(16) glm::mat4 model_matrix{1.f};
     alignas(16) glm::mat4 normal_matrix{1.f};
 };
 static_assert(sizeof(SimplePushConstant) == 128);
 
-SimpleRenderSystem::SimpleRenderSystem(Device &device, VkRenderPass render_pass)
+SimpleRenderSystem::SimpleRenderSystem(Device &device,
+                                       VkRenderPass render_pass,
+                                       VkDescriptorSetLayout set_layout)
     : device_(device) {
-    create_pipeline_layout();
+    create_pipeline_layout(set_layout);
     create_pipeline(render_pass);
 }
 
@@ -26,17 +29,21 @@ SimpleRenderSystem::~SimpleRenderSystem() {
     vkDestroyPipelineLayout(device_.get_device(), pipeline_layout_, nullptr);
 }
 
-void SimpleRenderSystem::create_pipeline_layout() {
+void SimpleRenderSystem::create_pipeline_layout(
+    VkDescriptorSetLayout set_layout) {
     VkPushConstantRange push_constant_range{};
     push_constant_range.stageFlags =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant_range.offset = 0;
     push_constant_range.size = sizeof(SimplePushConstant);
 
+    std::vector<VkDescriptorSetLayout> descriptor_set_layouts{set_layout};
+
     VkPipelineLayoutCreateInfo pipeline_layout_info{};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = 0;    // Optional
-    pipeline_layout_info.pSetLayouts = nullptr; // Optional
+    pipeline_layout_info.setLayoutCount =
+        static_cast<uint32_t>(descriptor_set_layouts.size());
+    pipeline_layout_info.pSetLayouts = descriptor_set_layouts.data();
     pipeline_layout_info.pushConstantRangeCount = 1;
     pipeline_layout_info.pPushConstantRanges = &push_constant_range;
 
@@ -64,12 +71,18 @@ void SimpleRenderSystem::create_pipeline(VkRenderPass render_pass) {
 void SimpleRenderSystem::draw(FrameInfo &frame_info, Entity entity) {
     pipeline_->bind(frame_info.command_buffer);
 
-    auto proj_view =
-        frame_info.camera.get_projection() * frame_info.camera.get_view();
+    vkCmdBindDescriptorSets(frame_info.command_buffer,
+                            VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            pipeline_layout_,
+                            0,
+                            1,
+                            &frame_info.descriptor_set,
+                            0,
+                            nullptr);
 
     auto &tf = entity.get_component<TransformComponent>();
     SimplePushConstant push{};
-    push.transform = proj_view * tf.model_matrix();
+    push.model_matrix = tf.model_matrix();
     push.normal_matrix = glm::mat4{tf.normal_matrix()};
 
     vkCmdPushConstants(frame_info.command_buffer,

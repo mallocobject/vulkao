@@ -8,5 +8,6 @@ struct FrameInfo {
     float frame_time;
     VkCommandBuffer command_buffer;
     Camera &camera;
+    VkDescriptorSet descriptor_set;
 };
 } // namespace vkao

@@ -12,7 +12,9 @@
 namespace vkao {
 class SimpleRenderSystem {
   public:
-    SimpleRenderSystem(Device &device, VkRenderPass render_pass);
+    SimpleRenderSystem(Device &device,
+                       VkRenderPass render_pass,
+                       VkDescriptorSetLayout set_layout);
     ~SimpleRenderSystem();
 
     SimpleRenderSystem(const SimpleRenderSystem &) = delete;
@@ -20,7 +22,7 @@ class SimpleRenderSystem {
     void draw(FrameInfo &frame_info, Entity entity);
 
   private:
-    void create_pipeline_layout();
+    void create_pipeline_layout(VkDescriptorSetLayout set_layout);
     void create_pipeline(VkRenderPass render_pass);
 
     Device &device_;

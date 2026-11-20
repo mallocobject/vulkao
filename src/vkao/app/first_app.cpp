@@ -7,6 +7,7 @@
 #include "graphics/buffer.hpp"
 #include "graphics/camera.hpp"
 #include "graphics/camera_controller.hpp"
+#include "graphics/descriptor.hpp"
 #include "graphics/frame_info.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/swap_chain.hpp"
@@ -19,11 +20,17 @@
 
 namespace vkao {
 struct GlobUBO {
-    glm::mat4 projection_view{1.f};
-    glm::vec3 light_direction{glm::normalize(glm::vec3{1.f, -3.f, -1.f})};
+    alignas(16) glm::mat4 projection_view{1.f};
+    alignas(16) glm::vec3 light_direction{
+        glm::normalize(glm::vec3{1.f, -3.f, -1.f})};
 };
 
 FirstApp::FirstApp() {
+    global_pool_ = DescriptorPool::Builder(device_)
+                       .set_max_sets(SwapChain::MAX_FRAMES_IN_FLIGHT)
+                       .add_pool_size(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                                      SwapChain::MAX_FRAMES_IN_FLIGHT)
+                       .build();
     load_entities();
 }
 
@@ -40,15 +47,33 @@ void FirstApp::run() {
         ubo_buffer->map();
     }
 
-    SimpleRenderSystem render_system{device_,
-                                     renderer_.get_swap_chain_render_pass()};
+    auto global_set_layout = DescriptorSetLayout::Builder(device_)
+                                 .add_binding(0,
+                                              VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                                              VK_SHADER_STAGE_VERTEX_BIT)
+                                 .build();
+    std::vector<VkDescriptorSet> global_descriptor_sets(
+        SwapChain::MAX_FRAMES_IN_FLIGHT);
+    for (int i = 0; i < global_descriptor_sets.size(); i++) {
+        auto buffer_info = ubo_buffers[i]->descriptor_info();
+        DescriptorWriter(*global_set_layout, *global_pool_)
+            .write_buffer(0, &buffer_info)
+            .build(global_descriptor_sets[i]);
+    }
+
+    SimpleRenderSystem render_system{
+        device_,
+        renderer_.get_swap_chain_render_pass(),
+        global_set_layout->get_descriptor_set_layout()};
 
     Camera camera;
 
     CameraController camera_controller;
     camera_controller.set_position_target(
         {0.f, 0.f, -1.f},
-        entities_.begin()->second.get_component<TransformComponent>().translation);
+        entities_.begin()
+            ->second.get_component<TransformComponent>()
+            .translation);
     const float fovy = glm::radians(45.f);
 
     while (running_) {
@@ -77,17 +102,15 @@ void FirstApp::run() {
         SDL_GetWindowSize(window_.get_window(), nullptr, &window_height);
         camera_controller.update(
             camera, fovy, aspect_ratio, static_cast<float>(window_height));
-        camera.set_perspective_projection(
-            fovy, aspect_ratio, 0.1f, 1000.f);
+        camera.set_perspective_projection(fovy, aspect_ratio, 0.1f, 1000.f);
 
         if (auto command_buffer = renderer_.begin_frame()) {
             int index = renderer_.get_frame_index();
-            FrameInfo frame_info{
-                index,
-                dt,
-                command_buffer,
-                camera,
-            };
+            FrameInfo frame_info{index,
+                                 dt,
+                                 command_buffer,
+                                 camera,
+                                 global_descriptor_sets[index]};
 
             // update
             GlobUBO ubo{};

@@ -7,18 +7,22 @@ layout(location = 3) in vec3 normal;
 
 layout(location = 0) out vec3 v_color;
 
+layout(set = 0, binding = 0) uniform GlobUBO {
+    mat4 projection_view;
+    vec3 light_direction;
+} ubo;
+
 layout(push_constant) uniform Push {
-    mat4 transform; // MVP: Projection * View * Model
+    mat4 model_matrix;
     mat4 normal_matrix; // for normal Model Space -> World Space
 } push;
 
-const vec3 DIRECTION_TO_LIGHT = normalize(vec3(1.0, -3.0, -1.0));
 const float AMBINET = 0.02;
 
 void main() {
-    gl_Position = push.transform * vec4(pos, 1.0);
+    gl_Position = ubo.projection_view * push.model_matrix * vec4(pos, 1.0);
     vec3 normal_world_space = normalize(mat3(push.normal_matrix) * normal);
-    float intensity = AMBINET + max(dot(normal_world_space, DIRECTION_TO_LIGHT), 0);
+    float intensity = AMBINET + max(dot(normal_world_space, ubo.light_direction), 0);
 
     v_color = intensity * color;
 }

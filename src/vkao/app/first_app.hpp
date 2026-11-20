@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/ref.hpp"
+#include "graphics/descriptor.hpp"
 #include "graphics/device.hpp"
 #include "graphics/renderer.hpp"
 #include "platform/window.hpp"
@@ -30,6 +31,9 @@ class FirstApp : public RefCounted {
     Window window_{WIDTH, HEIGHT, "vulkao"};
     Device device_{window_};
     Renderer renderer_{window_, device_};
+
+    // note: order of declarations matters
+    Ref<DescriptorPool> global_pool_;
 
     bool running_{true};
 
