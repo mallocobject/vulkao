@@ -32,40 +32,25 @@ struct hash<vkao::Mesh::Vertex> {
 namespace vkao {
 std::vector<VkVertexInputBindingDescription>
 Mesh::Vertex::get_binding_description() {
-    std::vector<VkVertexInputBindingDescription> binding_descriptions(1);
-    binding_descriptions[0].binding = 0;
-    binding_descriptions[0].stride = sizeof(Vertex);
-    binding_descriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    std::vector<VkVertexInputBindingDescription> binding_descriptions;
+
+    binding_descriptions.push_back(
+        {0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX});
 
     return binding_descriptions;
 }
 std::vector<VkVertexInputAttributeDescription>
 Mesh::Vertex::get_attribute_description() {
-    std::vector<VkVertexInputAttributeDescription> attribute_descriptions(4);
+    std::vector<VkVertexInputAttributeDescription> attribute_descriptions;
 
-    // position
-    attribute_descriptions[0].location = 0;
-    attribute_descriptions[0].binding = 0;
-    attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT; // signed
-    attribute_descriptions[0].offset = offsetof(Vertex, position);
-
-    // color
-    attribute_descriptions[1].location = 1;
-    attribute_descriptions[1].binding = 0;
-    attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT; // signed
-    attribute_descriptions[1].offset = offsetof(Vertex, color);
-
-    // uv
-    attribute_descriptions[2].location = 2;
-    attribute_descriptions[2].binding = 0;
-    attribute_descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-    attribute_descriptions[2].offset = offsetof(Vertex, uv);
-
-    // normal
-    attribute_descriptions[3].location = 3;
-    attribute_descriptions[3].binding = 0;
-    attribute_descriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attribute_descriptions[3].offset = offsetof(Vertex, normal);
+    attribute_descriptions.push_back(
+        {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position)});
+    attribute_descriptions.push_back(
+        {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)});
+    attribute_descriptions.push_back(
+        {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv)});
+    attribute_descriptions.push_back(
+        {3, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)});
 
     return attribute_descriptions;
 }

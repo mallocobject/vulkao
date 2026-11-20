@@ -1,8 +1,8 @@
 #pragma once
 
-#include "glm/ext/matrix_float4x4.hpp"
 #include "core/math.hpp"
 #include "core/ref.hpp"
+#include "glm/ext/matrix_float4x4.hpp"
 #include "graphics/mesh.hpp"
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -19,8 +19,12 @@ struct TransformComponent {
 
     glm::vec3 world{1.f}; // reserved
 
-    glm::mat4 load_matrix() const {
+    glm::mat4 model_matrix() const {
         return SRT(scale, rotation, translation);
+    }
+
+    glm::mat3 normal_matrix() const {
+        return SRTNormal(scale, rotation);
     }
 };
 

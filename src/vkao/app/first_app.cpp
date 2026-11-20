@@ -83,11 +83,10 @@ void FirstApp::load_entities() {
     auto entity = registry_.create_entity();
     entities_[entity.get_component<IdComponent>().id] = entity;
 
-    auto &transform = entity.get_component<TransformComponent>();
-    transform.scale = {0.55f, 0.55f, 0.55f};
-    transform.translation = {0.f, 0.f, 2.5f};
+    auto &tf = entity.get_component<TransformComponent>();
+    tf.translation = {0.f, 0.5f, 1.5f};
 
-    auto mesh = Mesh::create(device_, ASSETS "/models/colored_cube.obj");
+    auto mesh = Mesh::create(device_, ASSETS "/models/flat_vase.obj");
     entity.add_component<MeshComponent>(mesh);
 }
 

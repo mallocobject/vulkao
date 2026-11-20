@@ -62,9 +62,10 @@ void SimpleRenderSystem::draw(VkCommandBuffer command_buffer,
 
     auto proj_view = camera.get_projection() * camera.get_view();
 
+    auto &tf = entity.get_component<TransformComponent>();
     SimplePushConstant push{};
-    push.transform =
-        proj_view * entity.get_component<TransformComponent>().load_matrix();
+    push.transform = proj_view * tf.model_matrix();
+    push.normal_matrix = glm::mat4{tf.normal_matrix()};
 
     vkCmdPushConstants(command_buffer,
                        pipeline_layout_,

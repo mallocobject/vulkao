@@ -11,8 +11,9 @@
 namespace vkao {
 struct SimplePushConstant {
     alignas(16) glm::mat4 transform{1.f};
+    alignas(16) glm::mat4 normal_matrix{1.f};
 };
-static_assert(sizeof(SimplePushConstant) == 64);
+static_assert(sizeof(SimplePushConstant) == 128);
 
 class SimpleRenderSystem {
   public:

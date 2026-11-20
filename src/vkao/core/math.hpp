@@ -1,5 +1,6 @@
 #pragma once
 
+#include "glm/ext/matrix_float3x3.hpp"
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
 
@@ -32,6 +33,33 @@ inline glm::mat4 SRT(const glm::vec3 &scale,
                          0.f,
                      },
                      {translation.x, translation.y, translation.z, 1.f}};
+}
+
+inline glm::mat3 SRTNormal(const glm::vec3 &scale, const glm::vec3 &rotation) {
+    const float c3 = glm::cos(rotation.z);
+    const float s3 = glm::sin(rotation.z);
+    const float c2 = glm::cos(rotation.x);
+    const float s2 = glm::sin(rotation.x);
+    const float c1 = glm::cos(rotation.y);
+    const float s1 = glm::sin(rotation.y);
+
+    const glm::vec3 inv_scale = 1.f / scale;
+
+    return glm::mat3{{
+                         inv_scale.x * (c1 * c3 + s1 * s2 * s3),
+                         inv_scale.x * (c2 * s3),
+                         inv_scale.x * (c1 * s2 * s3 - c3 * s1),
+                     },
+                     {
+                         inv_scale.y * (c3 * s1 * s2 - c1 * s3),
+                         inv_scale.y * (c2 * c3),
+                         inv_scale.y * (c1 * c3 * s2 + s1 * s3),
+                     },
+                     {
+                         inv_scale.z * (c2 * s1),
+                         inv_scale.z * (-s2),
+                         inv_scale.z * (c1 * c2),
+                     }};
 }
 
 inline glm::mat3 rotation_of(const glm::mat4 &transform) {

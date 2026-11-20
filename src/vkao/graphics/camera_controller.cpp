@@ -28,12 +28,11 @@ void CameraController::move_in_plane_XZ(SDL_Window *window,
     }
 
     if (glm::dot(movement, movement) > std::numeric_limits<float>::epsilon()) {
-        auto &transform = entity.get_component<TransformComponent>();
-        const auto &rotation = rotation_matrix_from_euler(transform.rotation);
+        auto &tf = entity.get_component<TransformComponent>();
+        const auto &rotation = rotation_matrix_from_euler(tf.rotation);
         movement = glm::normalize(movement);
-        transform.translation +=
-            move_speed_ * dt *
-            (rotation[0] * movement.x + rotation[2] * movement.y);
+        tf.translation += move_speed_ * dt *
+                          (rotation[0] * movement.x + rotation[2] * movement.y);
     }
 }
 
@@ -45,13 +44,13 @@ void CameraController::rotate_around_X_and_Y(SDL_Window *window,
     SDL_MouseButtonFlags buttons = SDL_GetRelativeMouseState(&dx, &dy);
 
     if (buttons & SDL_BUTTON_LMASK) {
-        auto &transform = entity.get_component<TransformComponent>();
+        auto &tf = entity.get_component<TransformComponent>();
 
-        transform.rotation.x += rotate_speed_ * dt * dy;
-        transform.rotation.y -= rotate_speed_ * dt * dx;
+        tf.rotation.x += rotate_speed_ * dt * dy;
+        tf.rotation.y -= rotate_speed_ * dt * dx;
 
         const float limit = glm::radians(89.f);
-        transform.rotation.x = std::clamp(transform.rotation.x, -limit, limit);
+        tf.rotation.x = std::clamp(tf.rotation.x, -limit, limit);
     }
 }
 } // namespace vkao
