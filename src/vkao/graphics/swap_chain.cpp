@@ -57,9 +57,11 @@ SwapChain::~SwapChain() {
     vkDestroyRenderPass(device_.get_device(), render_pass_, nullptr);
 
     // cleanup synchronization objects
+    for (auto semaphore : render_finished_semaphores_) {
+        vkDestroySemaphore(device_.get_device(), semaphore, nullptr);
+    }
+
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vkDestroySemaphore(
-            device_.get_device(), render_finished_semaphores_[i], nullptr);
         vkDestroySemaphore(
             device_.get_device(), image_available_semaphores_[i], nullptr);
         vkDestroyFence(device_.get_device(), inflight_fences_[i], nullptr);
@@ -111,7 +113,7 @@ VkResult SwapChain::submit_command_buffers(const VkCommandBuffer *buffers,
     submit_info.pCommandBuffers = buffers;
 
     VkSemaphore signal_semaphores[] = {
-        render_finished_semaphores_[current_frame_]};
+        render_finished_semaphores_[*image_index]};
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = signal_semaphores;
 
@@ -386,7 +388,7 @@ void SwapChain::create_depth_resources() {
 
 void SwapChain::create_sync_objects() {
     image_available_semaphores_.resize(MAX_FRAMES_IN_FLIGHT);
-    render_finished_semaphores_.resize(MAX_FRAMES_IN_FLIGHT);
+    render_finished_semaphores_.resize(image_count());
     inflight_fences_.resize(MAX_FRAMES_IN_FLIGHT);
     images_inflight_.resize(image_count(), VK_NULL_HANDLE);
 
@@ -397,16 +399,20 @@ void SwapChain::create_sync_objects() {
     fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
+    // Presentation wait semaphores are reused with their swapchain images.
+    for (auto &semaphore : render_finished_semaphores_) {
+        VKAO_ASSERT(vkCreateSemaphore(device_.get_device(),
+                                      &semaphore_info,
+                                      nullptr,
+                                      &semaphore) == VK_SUCCESS,
+                    "failed to create render finished semaphore!");
+    }
+
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         VKAO_ASSERT(vkCreateSemaphore(device_.get_device(),
                                       &semaphore_info,
                                       nullptr,
                                       &image_available_semaphores_[i]) ==
-                            VK_SUCCESS &&
-                        vkCreateSemaphore(device_.get_device(),
-                                          &semaphore_info,
-                                          nullptr,
-                                          &render_finished_semaphores_[i]) ==
                             VK_SUCCESS &&
                         vkCreateFence(device_.get_device(),
                                       &fence_info,
