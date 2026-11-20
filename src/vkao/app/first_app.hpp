@@ -34,7 +34,6 @@ class FirstApp : public RefCounted {
     bool running_{true};
 
     Registry registry_;
-    Entity viewer_;
     std::unordered_map<uint32_t, Entity> entities_;
 };
 } // namespace vkao

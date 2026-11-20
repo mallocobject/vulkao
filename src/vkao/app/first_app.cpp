@@ -24,11 +24,6 @@ struct GlobUBO {
 };
 
 FirstApp::FirstApp() {
-    viewer_ = registry_.create_entity();
-    auto &transform = viewer_.get_component<TransformComponent>();
-    transform.translation = glm::vec3{0.f, 0.f, -1.f};
-    transform.rotation = glm::vec3{0.f, 0.f, 0.f};
-
     load_entities();
 }
 
@@ -51,11 +46,16 @@ void FirstApp::run() {
     Camera camera;
 
     CameraController camera_controller;
+    camera_controller.set_position_target(
+        {0.f, 0.f, -1.f},
+        entities_.begin()->second.get_component<TransformComponent>().translation);
+    const float fovy = glm::radians(45.f);
 
     while (running_) {
         SDL_Event event;
 
         while (SDL_PollEvent(&event)) {
+            camera_controller.handle_event(event);
             switch (event.type) {
             case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
                 running_ = false;
@@ -72,16 +72,13 @@ void FirstApp::run() {
         float dt = std::chrono::duration<float>(now - last).count();
         last = now;
         // update camera
-        camera_controller.rotate_around_X_and_Y(
-            window_.get_window(), dt, viewer_);
-        camera_controller.move_in_plane_XZ(window_.get_window(), dt, viewer_);
-
-        auto &transform = viewer_.get_component<TransformComponent>();
-        camera.set_view_YXZ(transform.translation, transform.rotation);
-
         auto aspect_ratio = renderer_.get_aspect_ratio();
+        int window_height = 0;
+        SDL_GetWindowSize(window_.get_window(), nullptr, &window_height);
+        camera_controller.update(
+            camera, fovy, aspect_ratio, static_cast<float>(window_height));
         camera.set_perspective_projection(
-            glm::radians(45.f), aspect_ratio, 0.1f, 1000.f);
+            fovy, aspect_ratio, 0.1f, 1000.f);
 
         if (auto command_buffer = renderer_.begin_frame()) {
             int index = renderer_.get_frame_index();
