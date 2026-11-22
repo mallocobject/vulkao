@@ -19,7 +19,7 @@ class SimpleRenderSystem {
 
     SimpleRenderSystem(const SimpleRenderSystem &) = delete;
 
-    void draw(FrameInfo &frame_info, Entity entity);
+    void render(FrameInfo &frame_info);
 
   private:
     void create_pipeline_layout(VkDescriptorSetLayout set_layout);

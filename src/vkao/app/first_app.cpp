@@ -2,7 +2,9 @@
 
 #include "core/logger.hpp"
 #include "core/ref.hpp"
+#include "glm/ext/matrix_float4x4.hpp"
 #include "glm/ext/vector_float3.hpp"
+#include "glm/ext/vector_float4.hpp"
 #include "glm/trigonometric.hpp"
 #include "graphics/buffer.hpp"
 #include "graphics/camera.hpp"
@@ -19,11 +21,22 @@
 #include <vulkan/vulkan_core.h>
 
 namespace vkao {
-struct GlobUBO {
+struct GlobalUBO {
+    alignas(16) glm::vec4 camera_position{0.f};
     alignas(16) glm::mat4 projection_view{1.f};
-    alignas(16) glm::vec3 light_direction{
-        glm::normalize(glm::vec3{1.f, -3.f, -1.f})};
+    alignas(16) glm::vec4 ambient_light_color{
+        1.f, 1.f, 1.f, 0.02f}; // w is intensity
+    alignas(16) glm::vec4 light_position{1.f, -2.f, -1.f, 1.f};
+    alignas(16) glm::vec4 light_color{1.f, 1.f, 1.f, 1.f};
+    alignas(16) glm::vec4 falloff{0.f, 0.f, 1.f, 0.f};
+    // x constant, y linear, z quadratic, w reserved
 };
+
+static_assert(offsetof(GlobalUBO, projection_view) == 16);
+static_assert(offsetof(GlobalUBO, light_position) == 96);
+static_assert(offsetof(GlobalUBO, light_color) == 112);
+static_assert(offsetof(GlobalUBO, falloff) == 128);
+static_assert(sizeof(GlobalUBO) == 144);
 
 FirstApp::FirstApp() {
     global_pool_ = DescriptorPool::Builder(device_)
@@ -39,7 +52,7 @@ void FirstApp::run() {
 
     for (auto &ubo_buffer : ubo_buffers) {
         ubo_buffer = make_ref<Buffer>(device_,
-                                      sizeof(GlobUBO),
+                                      sizeof(GlobalUBO),
                                       1,
                                       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
@@ -50,7 +63,7 @@ void FirstApp::run() {
     auto global_set_layout = DescriptorSetLayout::Builder(device_)
                                  .add_binding(0,
                                               VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                                              VK_SHADER_STAGE_VERTEX_BIT)
+                                              VK_SHADER_STAGE_ALL_GRAPHICS)
                                  .build();
     std::vector<VkDescriptorSet> global_descriptor_sets(
         SwapChain::MAX_FRAMES_IN_FLIGHT);
@@ -106,14 +119,19 @@ void FirstApp::run() {
 
         if (auto command_buffer = renderer_.begin_frame()) {
             int index = renderer_.get_frame_index();
-            FrameInfo frame_info{index,
-                                 dt,
-                                 command_buffer,
-                                 camera,
-                                 global_descriptor_sets[index]};
+            FrameInfo frame_info{
+                index,
+                dt,
+                command_buffer,
+                camera,
+                global_descriptor_sets[index],
+                registry_,
+            };
 
             // update
-            GlobUBO ubo{};
+            GlobalUBO ubo{};
+            ubo.camera_position =
+                glm::vec4{camera_controller.get_position(), 1.f};
             ubo.projection_view = camera.get_projection() * camera.get_view();
             ubo_buffers[index]->write_to_buffer(
                 reinterpret_cast<const void *>(&ubo));
@@ -121,7 +139,7 @@ void FirstApp::run() {
 
             // render
             renderer_.begin_swap_chain_render_pass(command_buffer);
-            render_system.draw(frame_info, entities_.begin()->second);
+            render_system.render(frame_info);
             renderer_.end_swap_chain_render_pass(command_buffer);
             renderer_.end_frame();
         }
@@ -131,14 +149,27 @@ void FirstApp::run() {
 }
 
 void FirstApp::load_entities() {
-    auto entity = registry_.create_entity();
-    entities_[entity.get_component<IdComponent>().id] = entity;
+    {
+        auto entity = registry_.create_entity();
+        entities_[entity.get_component<IdComponent>().id] = entity;
 
-    auto &tf = entity.get_component<TransformComponent>();
-    tf.translation = {0.f, 0.5f, 0.5f};
+        auto &tf = entity.get_component<TransformComponent>();
+        tf.translation = {0.f, 0.5f, 0.5f};
 
-    auto mesh = Mesh::create(device_, ASSETS "/model/flat_vase.obj");
-    entity.add_component<MeshComponent>(mesh);
+        auto mesh = Mesh::create(device_, ASSETS "/model/flat_vase.obj");
+        entity.add_component<MeshComponent>(mesh);
+    }
+
+    {
+        auto entity = registry_.create_entity();
+        entities_[entity.get_component<IdComponent>().id] = entity;
+
+        auto &tf = entity.get_component<TransformComponent>();
+        tf.translation = {0.f, 0.5f, 0.f};
+
+        auto mesh = Mesh::create(device_, ASSETS "/model/quad.obj");
+        entity.add_component<MeshComponent>(mesh);
+    }
 }
 
 } // namespace vkao

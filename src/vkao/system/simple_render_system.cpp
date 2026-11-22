@@ -68,7 +68,7 @@ void SimpleRenderSystem::create_pipeline(VkRenderPass render_pass) {
         device_, "shader.vert.spv", "shader.frag.spv", config_info);
 }
 
-void SimpleRenderSystem::draw(FrameInfo &frame_info, Entity entity) {
+void SimpleRenderSystem::render(FrameInfo &frame_info) {
     pipeline_->bind(frame_info.command_buffer);
 
     vkCmdBindDescriptorSets(frame_info.command_buffer,
@@ -80,23 +80,23 @@ void SimpleRenderSystem::draw(FrameInfo &frame_info, Entity entity) {
                             0,
                             nullptr);
 
-    auto &tf = entity.get_component<TransformComponent>();
-    SimplePushConstant push{};
-    push.model_matrix = tf.model_matrix();
-    push.normal_matrix = glm::mat4{tf.normal_matrix()};
+    for (auto [handle, tf, mesh] :
+         frame_info.registry.view<TransformComponent, MeshComponent>().each()) {
+        SimplePushConstant push{};
+        push.model_matrix = tf.model_matrix();
+        push.normal_matrix = glm::mat4{tf.normal_matrix()};
 
-    vkCmdPushConstants(frame_info.command_buffer,
-                       pipeline_layout_,
-                       VK_SHADER_STAGE_VERTEX_BIT |
-                           VK_SHADER_STAGE_FRAGMENT_BIT,
-                       0,
-                       sizeof(SimplePushConstant),
-                       &push);
+        vkCmdPushConstants(frame_info.command_buffer,
+                           pipeline_layout_,
+                           VK_SHADER_STAGE_VERTEX_BIT |
+                               VK_SHADER_STAGE_FRAGMENT_BIT,
+                           0,
+                           sizeof(SimplePushConstant),
+                           &push);
 
-    auto &mesh = entity.get_component<MeshComponent>().mesh;
-
-    mesh->bind(frame_info.command_buffer);
-    mesh->draw(frame_info.command_buffer);
+        mesh.mesh->bind(frame_info.command_buffer);
+        mesh.mesh->draw(frame_info.command_buffer);
+    }
 }
 
 } // namespace vkao

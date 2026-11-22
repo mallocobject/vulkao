@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graphics/camera.hpp"
+#include "scene/registry.hpp"
 #include <vulkan/vulkan_core.h>
 namespace vkao {
 struct FrameInfo {
@@ -9,5 +10,6 @@ struct FrameInfo {
     VkCommandBuffer command_buffer;
     Camera &camera;
     VkDescriptorSet descriptor_set;
+    Registry &registry;
 };
 } // namespace vkao
