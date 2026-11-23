@@ -13,8 +13,8 @@
 #include "graphics/frame_info.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/swap_chain.hpp"
+#include "passes/forward_pass.hpp"
 #include "scene/component.hpp"
-#include "system/simple_render_system.hpp"
 #include <chrono>
 #include <cstdint>
 #include <vector>
@@ -68,10 +68,9 @@ void FirstApp::run() {
             .build(global_descriptor_sets[i]);
     }
 
-    SimpleRenderSystem render_system{
-        device_,
-        renderer_.get_swap_chain_render_pass(),
-        global_set_layout->get_descriptor_set_layout()};
+    ForwardPass forward_pass{device_,
+                             renderer_.get_swap_chain_render_pass(),
+                             global_set_layout->get_descriptor_set_layout()};
 
     Camera camera;
 
@@ -132,9 +131,9 @@ void FirstApp::run() {
             ubo_buffers[index]->flush();
 
             // render
-            renderer_.begin_swap_chain_render_pass(command_buffer);
-            render_system.render(frame_info);
-            renderer_.end_swap_chain_render_pass(command_buffer);
+            const auto target = renderer_.get_current_render_target();
+            forward_pass.render(frame_info, target);
+
             renderer_.end_frame();
         }
     }
