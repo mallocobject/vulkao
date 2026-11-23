@@ -43,8 +43,8 @@ struct MaterialComponent {
 struct LightComponent {
     enum class LightType {
         Directional = 0,
-        Spot,
         Point,
+        Spot,
     } type;
 
     glm::vec3 color{1.f};

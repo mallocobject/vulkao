@@ -220,11 +220,25 @@ void FirstApp::load_entities() {
         entities_[entity.get_component<IdComponent>().id] = entity;
 
         auto &tf = entity.get_component<TransformComponent>();
-        tf.scale = {0.1f, 0.1f, 0.1f};
         tf.translation = {0.f, 0.f, 0.f};
 
         auto &light = entity.add_component<LightComponent>();
         light.type = LightComponent::LightType::Point;
+    }
+
+    {
+        auto entity = registry_.create_entity();
+        entities_[entity.get_component<IdComponent>().id] = entity;
+
+        auto &tf = entity.get_component<TransformComponent>();
+        tf.rotation = {1.f, 1.f, -1.f};
+        tf.translation = {-1.f, 0.f, 1.f};
+
+        auto &light = entity.add_component<LightComponent>();
+        light.type = LightComponent::LightType::Spot;
+        light.color = glm::vec4{1.f, 0.f, 0.f, 1.f};
+        light.cone.inner = glm::radians(12.5f);
+        light.cone.outer = glm::radians(17.5f);
     }
 
     {

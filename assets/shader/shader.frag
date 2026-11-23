@@ -15,11 +15,12 @@ layout(std140, set = 0, binding = 0) uniform CameraUBO {
 const uint MAX_LIGHTS = 10u;
 
 struct Light {
-    vec4 position;
-    vec4 direction;
-    vec4 falloff;
-    vec4 color;
+    vec4 position;  // xyz = position,     w = type(0/1/2)
+    vec4 direction; // xyz = direction,     w = cos(inner cone)
+    vec4 falloff; // x = const, y = linear, z = quad, w = cos(outer cone)
+    vec4 color; // rgb = color,     w = intensity
 };
+
 
 layout(std140, set = 0, binding = 1) uniform LightingUBO {
     vec4 ambient_light_color;
@@ -41,14 +42,28 @@ void main() {
 
     for (uint i = 0u; i < min(light_data.light_count, MAX_LIGHTS); ++i) {
         Light light = light_data.lights[i];
-        vec3 to_light = light.position.xyz - frag_pos_world;
-        float dist_squared = max(dot(to_light, to_light), 0.000001);
-        float dist = sqrt(dist_squared);
-        vec3 dir_light = to_light / dist;
+
         vec3 light_intensity = light.color.rgb * light.color.a;
-        float attenuation = 1.0 / max(
-            dot(light.falloff.xyz, vec3(1.0, dist, dist_squared)),
-            0.000001);
+        float type = light.position.w;
+        vec3 dir_light = normalize(-light.direction.xyz);
+        float attenuation = 1.0;
+
+        if (type > 0.5) {
+            vec3 to_light = light.position.xyz - frag_pos_world;
+            float dist_squared = max(dot(to_light, to_light), 0.000001);
+            float dist = sqrt(dist_squared);
+
+            dir_light = to_light / dist;
+            attenuation = 1.0 / max(
+                dot(light.falloff.xyz, vec3(1.0, dist, dist_squared)),
+                0.000001);
+
+            if (type > 1.5) {
+                float cos_angle = dot(-dir_light, normalize(light.direction.xyz));
+                    attenuation *= smoothstep(
+                        light.falloff.w, light.direction.w, cos_angle);
+            }
+        }
 
         float n_dot_l = max(dot(normal_world, dir_light), 0.0);
         diffuse += light_intensity * n_dot_l * attenuation;
