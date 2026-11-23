@@ -140,6 +140,10 @@ void FirstApp::run() {
             }
         }
 
+        if (!running_) {
+            break;
+        }
+
         static auto last = std::chrono::steady_clock::now();
         auto now = std::chrono::steady_clock::now();
         float dt = std::chrono::duration<float>(now - last).count();

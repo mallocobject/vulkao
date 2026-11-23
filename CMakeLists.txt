@@ -12,7 +12,7 @@ if (MSVC)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include(shaders)
+include(shader)
 
 file(GLOB_RECURSE VULKAO_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")

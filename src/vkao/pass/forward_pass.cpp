@@ -21,12 +21,6 @@ ForwardPass::~ForwardPass() {
     vkDestroyPipelineLayout(device_.get_device(), pipeline_layout_, nullptr);
 }
 
-void ForwardPass::render(FrameInfo &frame_info, const RenderTarget &target) {
-    begin(frame_info.command_buffer, target);
-    draw_scene(frame_info);
-    end(frame_info.command_buffer);
-}
-
 void ForwardPass::create_pipeline_layout(
     std::vector<VkDescriptorSetLayout> set_layouts) {
     VkPushConstantRange push_constant_range{};
