@@ -6,14 +6,15 @@ layout(location = 2) in vec3 frag_normal_world;
 
 layout(location = 0) out vec4 out_color;
 
-layout(set = 0, binding = 0) uniform GlobalUBO {
+layout(std140, set = 0, binding = 0) uniform GlobalUBO {
     vec4 camera_position;
-    mat4 projection_view;
+    mat4 view_proj;
     vec4 ambient_light_color;
     vec4 light_position;
     vec4 light_color;
     vec4 falloff;
 } ubo;
+
 
 void main() {
     vec3 dir_light = normalize(ubo.light_position.xyz - frag_pos_world);

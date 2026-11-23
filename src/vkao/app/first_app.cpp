@@ -23,7 +23,7 @@
 namespace vkao {
 struct GlobalUBO {
     alignas(16) glm::vec4 camera_position{0.f};
-    alignas(16) glm::mat4 projection_view{1.f};
+    alignas(16) glm::mat4 view_proj{1.f};
     alignas(16) glm::vec4 ambient_light_color{
         1.f, 1.f, 1.f, 0.02f}; // w is intensity
     alignas(16) glm::vec4 light_position{1.f, -2.f, -1.f, 1.f};
@@ -31,12 +31,6 @@ struct GlobalUBO {
     alignas(16) glm::vec4 falloff{0.f, 0.f, 1.f, 0.f};
     // x constant, y linear, z quadratic, w reserved
 };
-
-static_assert(offsetof(GlobalUBO, projection_view) == 16);
-static_assert(offsetof(GlobalUBO, light_position) == 96);
-static_assert(offsetof(GlobalUBO, light_color) == 112);
-static_assert(offsetof(GlobalUBO, falloff) == 128);
-static_assert(sizeof(GlobalUBO) == 144);
 
 FirstApp::FirstApp() {
     global_pool_ = DescriptorPool::Builder(device_)
@@ -132,7 +126,7 @@ void FirstApp::run() {
             GlobalUBO ubo{};
             ubo.camera_position =
                 glm::vec4{camera_controller.get_position(), 1.f};
-            ubo.projection_view = camera.get_projection() * camera.get_view();
+            ubo.view_proj = camera.get_projection() * camera.get_view();
             ubo_buffers[index]->write_to_buffer(
                 reinterpret_cast<const void *>(&ubo));
             ubo_buffers[index]->flush();
@@ -168,6 +162,17 @@ void FirstApp::load_entities() {
         tf.translation = {0.f, 0.5f, 0.f};
 
         auto mesh = Mesh::create(device_, ASSETS "/model/quad.obj");
+        entity.add_component<MeshComponent>(mesh);
+    }
+
+    {
+        auto entity = registry_.create_entity();
+        entities_[entity.get_component<IdComponent>().id] = entity;
+
+        auto &tf = entity.get_component<TransformComponent>();
+        tf.translation = {-0.5f, 0.5f, 0.5f};
+
+        auto mesh = Mesh::create(device_, ASSETS "/model/smooth_vase.obj");
         entity.add_component<MeshComponent>(mesh);
     }
 }

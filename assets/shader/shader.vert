@@ -11,7 +11,7 @@ layout(location = 2) out vec3 frag_normal_world;
 
 layout(std140, set = 0, binding = 0) uniform GlobalUBO {
     vec4 camera_position;
-    mat4 projection_view;
+    mat4 view_proj;
     vec4 ambient_light_color;
     vec4 light_position;
     vec4 light_color;
@@ -25,7 +25,7 @@ layout(push_constant) uniform Push {
 
 void main() {
     vec4 pos_world = push.model_matrix * vec4(pos, 1.0);
-    gl_Position = ubo.projection_view * pos_world;
+    gl_Position = ubo.view_proj * pos_world;
     frag_pos_world = pos_world.xyz;
     frag_normal_world = normalize(mat3(push.normal_matrix) * normal);
     frag_color = color;

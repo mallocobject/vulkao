@@ -73,18 +73,17 @@ void Pipeline::create_graphics_pipeline(
     shader_stage_infos[1].module = frag_shader_module_;
     shader_stage_infos[1].pName = "main";
 
-    auto binding_descriptions = Mesh::Vertex::get_binding_description();
-    auto attribute_descriptions = Mesh::Vertex::get_attribute_description();
     VkPipelineVertexInputStateCreateInfo vertex_input_info{};
     vertex_input_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_info.vertexBindingDescriptionCount =
-        static_cast<uint32_t>(binding_descriptions.size());
-    vertex_input_info.pVertexBindingDescriptions = binding_descriptions.data();
+        static_cast<uint32_t>(config_info.binding_description.size());
+    vertex_input_info.pVertexBindingDescriptions =
+        config_info.binding_description.data();
     vertex_input_info.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(attribute_descriptions.size());
+        static_cast<uint32_t>(config_info.attribute_description.size());
     vertex_input_info.pVertexAttributeDescriptions =
-        attribute_descriptions.data();
+        config_info.attribute_description.data();
 
     VkGraphicsPipelineCreateInfo pipeline_info{};
     pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -137,6 +136,10 @@ void Pipeline::bind(VkCommandBuffer command_buffer) {
 
 void Pipeline::create_default_pipeline_config_info(
     PipelineConfigInfo &config_info) {
+
+    config_info.binding_description = Mesh::Vertex::get_binding_description();
+    config_info.attribute_description =
+        Mesh::Vertex::get_attribute_description();
 
     config_info.input_assembly_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
