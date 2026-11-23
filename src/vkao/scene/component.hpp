@@ -4,6 +4,8 @@
 #include "core/ref.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
 #include "graphics/mesh.hpp"
+#include "graphics/texture.hpp"
+#include "vulkan/vulkan_core.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 
@@ -30,5 +32,10 @@ struct TransformComponent {
 
 struct MeshComponent {
     Ref<Mesh> mesh;
+};
+
+struct MaterialComponent {
+    Ref<Texture> base_color_texture;
+    VkDescriptorSet descriptor_set{VK_NULL_HANDLE};
 };
 } // namespace vkao

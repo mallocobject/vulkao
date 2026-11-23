@@ -1,4 +1,4 @@
-#include "passes/forward_pass.hpp"
+#include "pass/forward_pass.hpp"
 #include "core/logger.hpp"
 #include "scene/component.hpp"
 
@@ -11,9 +11,9 @@ static_assert(sizeof(SimplePushConstant) <= 128);
 
 ForwardPass::ForwardPass(Device &device,
                          VkRenderPass render_pass,
-                         VkDescriptorSetLayout global_set_layout)
+                         std::vector<VkDescriptorSetLayout> set_layouts)
     : device_(device) {
-    create_pipeline_layout(global_set_layout);
+    create_pipeline_layout(set_layouts);
     create_pipeline(render_pass);
 }
 
@@ -28,21 +28,18 @@ void ForwardPass::render(FrameInfo &frame_info, const RenderTarget &target) {
 }
 
 void ForwardPass::create_pipeline_layout(
-    VkDescriptorSetLayout global_set_layout) {
+    std::vector<VkDescriptorSetLayout> set_layouts) {
     VkPushConstantRange push_constant_range{};
     push_constant_range.stageFlags =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant_range.offset = 0;
     push_constant_range.size = sizeof(SimplePushConstant);
 
-    std::vector<VkDescriptorSetLayout> descriptor_set_layouts{
-        global_set_layout};
-
     VkPipelineLayoutCreateInfo pipeline_layout_info{};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount =
-        static_cast<uint32_t>(descriptor_set_layouts.size());
-    pipeline_layout_info.pSetLayouts = descriptor_set_layouts.data();
+        static_cast<uint32_t>(set_layouts.size());
+    pipeline_layout_info.pSetLayouts = set_layouts.data();
     pipeline_layout_info.pushConstantRangeCount = 1;
     pipeline_layout_info.pPushConstantRanges = &push_constant_range;
 
@@ -78,7 +75,7 @@ void ForwardPass::begin(VkCommandBuffer command_buffer,
 
     render_pass_info.renderArea.extent = target.extent;
     std::array<VkClearValue, 2> clear_values{};
-    clear_values[0].color = {0.f, 0.f, 0.f, 1.f};
+    clear_values[0].color = {{0.f, 0.f, 0.f, 1.f}};
     clear_values[1].depthStencil = {1.f, 0};
 
     render_pass_info.clearValueCount =
@@ -117,8 +114,19 @@ void ForwardPass::draw_scene(FrameInfo &frame_info) {
                             0,
                             nullptr);
 
-    for (auto [handle, tf, mesh] :
-         frame_info.registry.view<TransformComponent, MeshComponent>().each()) {
+    for (auto [handle, tf, mesh, material] :
+         frame_info.registry
+             .view<TransformComponent, MeshComponent, MaterialComponent>()
+             .each()) {
+        vkCmdBindDescriptorSets(frame_info.command_buffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                pipeline_layout_,
+                                1,
+                                1,
+                                &material.descriptor_set,
+                                0,
+                                nullptr);
+
         SimplePushConstant push{};
         push.model_matrix = tf.model_matrix();
         push.normal_matrix = glm::mat4{tf.normal_matrix()};

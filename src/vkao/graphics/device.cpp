@@ -533,9 +533,9 @@ void Device::create_image_with_info(const VkImageCreateInfo &image_info,
                                     VkMemoryPropertyFlags properties,
                                     VkImage &image,
                                     VkDeviceMemory &image_memory) {
-    if (vkCreateImage(device_, &image_info, nullptr, &image) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create image!");
-    }
+    VKAO_ASSERT(vkCreateImage(device_, &image_info, nullptr, &image) ==
+                    VK_SUCCESS,
+                "failed to create image!");
 
     VkMemoryRequirements mem_requirements;
     vkGetImageMemoryRequirements(device_, image, &mem_requirements);

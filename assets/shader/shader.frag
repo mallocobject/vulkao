@@ -1,8 +1,9 @@
 #version 450
 
-layout(location = 0) in vec3 frag_color;
-layout(location = 1) in vec3 frag_pos_world;
-layout(location = 2) in vec3 frag_normal_world;
+layout(location = 0) in vec3 frag_pos_world;
+layout(location = 1) in vec3 frag_color;
+layout(location = 2) in vec2 frag_uv;
+layout(location = 3) in vec3 frag_normal_world;
 
 layout(location = 0) out vec4 out_color;
 
@@ -15,6 +16,8 @@ layout(std140, set = 0, binding = 0) uniform GlobalUBO {
     vec4 falloff;
 } ubo;
 
+layout(set = 1, binding = 0)
+uniform sampler2D base_color_texture;
 
 void main() {
     vec3 dir_light = normalize(ubo.light_position.xyz - frag_pos_world);
@@ -30,5 +33,7 @@ void main() {
     vec3 h = normalize(dir_eye + dir_light);
     vec3 specular = light_intensity * pow(max(dot(frag_normal_world, h), 0), 64) / falloff;
     
-    out_color = vec4(frag_color * (ambient + diffuse + specular), 1.0);
+    vec3 base_color = texture(base_color_texture, frag_uv).rgb * frag_color;
+
+    out_color = vec4(base_color * (ambient + diffuse + specular), 1.0);
 }

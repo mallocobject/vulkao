@@ -13,8 +13,10 @@
 #include "graphics/frame_info.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/swap_chain.hpp"
-#include "passes/forward_pass.hpp"
+#include "graphics/texture.hpp"
+#include "pass/forward_pass.hpp"
 #include "scene/component.hpp"
+#include "scene/entity.hpp"
 #include <chrono>
 #include <cstdint>
 #include <vector>
@@ -34,10 +36,14 @@ struct GlobalUBO {
 
 FirstApp::FirstApp() {
     global_pool_ = DescriptorPool::Builder(device_)
-                       .set_max_sets(SwapChain::MAX_FRAMES_IN_FLIGHT)
+                       .set_max_sets(SwapChain::MAX_FRAMES_IN_FLIGHT +
+                                     Texture::MAX_NUM_MATERIALS)
                        .add_pool_size(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                                       SwapChain::MAX_FRAMES_IN_FLIGHT)
+                       .add_pool_size(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                                      Texture::MAX_NUM_MATERIALS)
                        .build();
+
     load_entities();
 }
 
@@ -59,18 +65,41 @@ void FirstApp::run() {
                                               VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                                               VK_SHADER_STAGE_ALL_GRAPHICS)
                                  .build();
+
     std::vector<VkDescriptorSet> global_descriptor_sets(
         SwapChain::MAX_FRAMES_IN_FLIGHT);
+
     for (int i = 0; i < global_descriptor_sets.size(); i++) {
         auto buffer_info = ubo_buffers[i]->descriptor_info();
-        DescriptorWriter(*global_set_layout, *global_pool_)
-            .write_buffer(0, &buffer_info)
-            .build(global_descriptor_sets[i]);
+        VKAO_ASSERT(DescriptorWriter(*global_set_layout, *global_pool_)
+                        .write_buffer(0, &buffer_info)
+                        .build(global_descriptor_sets[i]),
+                    "failed to allocate global descriptor set");
     }
 
-    ForwardPass forward_pass{device_,
-                             renderer_.get_swap_chain_render_pass(),
-                             global_set_layout->get_descriptor_set_layout()};
+    auto material_set_layout =
+        DescriptorSetLayout::Builder(device_)
+            .add_binding(0,
+                         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                         VK_SHADER_STAGE_FRAGMENT_BIT)
+            .build();
+
+    for (auto [handle, material] : registry_.view<MaterialComponent>().each()) {
+        auto image_info = material.base_color_texture->descriptor_info();
+
+        VKAO_ASSERT(DescriptorWriter(*material_set_layout, *global_pool_)
+                        .write_image(0, &image_info)
+                        .build(material.descriptor_set),
+                    "failed to allocate material descriptor set");
+    }
+
+    ForwardPass forward_pass{
+        device_,
+        renderer_.get_swap_chain_render_pass(),
+        {
+            global_set_layout->get_descriptor_set_layout(),
+            material_set_layout->get_descriptor_set_layout(),
+        }};
 
     Camera camera;
 
@@ -142,6 +171,10 @@ void FirstApp::run() {
 }
 
 void FirstApp::load_entities() {
+    const uint32_t while_pixels = ~0u;
+    auto white_texture = make_ref<Texture>(
+        device_, 1, 1, reinterpret_cast<const uint8_t *>(&while_pixels));
+
     {
         auto entity = registry_.create_entity();
         entities_[entity.get_component<IdComponent>().id] = entity;
@@ -162,6 +195,11 @@ void FirstApp::load_entities() {
 
         auto mesh = Mesh::create(device_, ASSETS "/model/quad.obj");
         entity.add_component<MeshComponent>(mesh);
+
+        auto texture =
+            make_ref<Texture>(device_, ASSETS "/texture/Checkerboard.png");
+        auto &material = entity.add_component<MaterialComponent>();
+        material.base_color_texture = texture;
     }
 
     {
@@ -173,6 +211,21 @@ void FirstApp::load_entities() {
 
         auto mesh = Mesh::create(device_, ASSETS "/model/smooth_vase.obj");
         entity.add_component<MeshComponent>(mesh);
+
+        entity.add_component<MaterialComponent>();
+    }
+
+    for (auto [handle, _] : registry_.view<MeshComponent>()->each()) {
+        Entity entity{handle, &registry_};
+        if (!entity.has_component<MaterialComponent>()) {
+            auto &material = entity.add_component<MaterialComponent>();
+            material.base_color_texture = white_texture;
+        } else if (auto &base_color_texture =
+                       entity.get_component<MaterialComponent>()
+                           .base_color_texture;
+                   !base_color_texture) {
+            base_color_texture = white_texture;
+        }
     }
 }
 
