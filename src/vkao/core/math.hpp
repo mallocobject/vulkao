@@ -71,31 +71,32 @@ inline glm::mat3 rotation_of(const glm::mat4 &transform) {
     return rotation;
 }
 
-inline glm::mat4 rotation_matrix_from_euler(const glm::vec3 &rotation) {
+inline glm::mat3 rotation_matrix_from_euler(const glm::vec3 &rotation) {
     const float c3 = glm::cos(rotation.z);
     const float s3 = glm::sin(rotation.z);
     const float c2 = glm::cos(rotation.x);
     const float s2 = glm::sin(rotation.x);
     const float c1 = glm::cos(rotation.y);
     const float s1 = glm::sin(rotation.y);
-    return glm::mat4{{
-                         (c1 * c3 + s1 * s2 * s3),
-                         (c2 * s3),
-                         (c1 * s2 * s3 - c3 * s1),
-                         0.f,
-                     },
-                     {
-                         (c3 * s1 * s2 - c1 * s3),
-                         (c2 * c3),
-                         (c1 * c3 * s2 + s1 * s3),
-                         0.f,
-                     },
-                     {
-                         (c2 * s1),
-                         (-s2),
-                         (c1 * c2),
-                         0.f,
-                     },
-                     {0.f, 0.f, 0.f, 1.f}};
+    return glm::mat3{
+        {
+            (c1 * c3 + s1 * s2 * s3),
+            (c2 * s3),
+            (c1 * s2 * s3 - c3 * s1),
+
+        },
+        {
+            (c3 * s1 * s2 - c1 * s3),
+            (c2 * c3),
+            (c1 * c3 * s2 + s1 * s3),
+
+        },
+        {
+            (c2 * s1),
+            (-s2),
+            (c1 * c2),
+
+        },
+    };
 }
 } // namespace vkao

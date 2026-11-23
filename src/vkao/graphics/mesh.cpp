@@ -62,6 +62,17 @@ void Mesh::Builder::load_object(const std::filesystem::path &filepath) {
 
     VKAO_ASSERT(!result.error, result.error.code.message());
 
+    for (auto &shape : result.shapes) {
+        auto &mesh = shape.mesh;
+
+        if (mesh.material_ids.empty()) {
+            mesh.material_ids =
+                rapidobj::Array<int32_t>(mesh.num_face_vertices.size());
+
+            std::fill(mesh.material_ids.begin(), mesh.material_ids.end(), -1);
+        }
+    }
+
     VKAO_ASSERT(rapidobj::Triangulate(result), result.error.code.message());
 
     vertices.clear();

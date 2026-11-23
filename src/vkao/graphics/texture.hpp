@@ -9,7 +9,7 @@
 namespace vkao {
 class Texture : public RefCounted {
   public:
-    static constexpr int MAX_NUM_MATERIALS = 32;
+    static constexpr int MAX_MATERIALS = 32;
 
     Texture(Device &device, const std::filesystem::path &filepath);
     Texture(Device &device,

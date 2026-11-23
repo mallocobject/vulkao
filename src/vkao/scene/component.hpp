@@ -3,6 +3,7 @@
 #include "core/math.hpp"
 #include "core/ref.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
+#include "glm/ext/vector_float3.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/texture.hpp"
 #include "vulkan/vulkan_core.h"
@@ -37,5 +38,29 @@ struct MeshComponent {
 struct MaterialComponent {
     Ref<Texture> base_color_texture;
     VkDescriptorSet descriptor_set{VK_NULL_HANDLE};
+};
+
+struct LightComponent {
+    enum class LightType {
+        Directional = 0,
+        Spot,
+        Point,
+    } type;
+
+    glm::vec3 color{1.f};
+    float intensity{1.f};
+
+    float range;
+
+    struct {
+        float constant{1.f};
+        float linear{0.f};
+        float quadratic{1.f};
+    } falloff;
+
+    struct {
+        float inner;
+        float outer;
+    } cone;
 };
 } // namespace vkao

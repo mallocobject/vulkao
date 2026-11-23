@@ -10,14 +10,10 @@ layout(location = 1) out vec3 frag_color;
 layout(location = 2) out vec2 frag_uv;
 layout(location = 3) out vec3 frag_normal_world;
 
-layout(std140, set = 0, binding = 0) uniform GlobalUBO {
+layout(std140, set = 0, binding = 0) uniform CameraUBO {
     vec4 camera_position;
     mat4 view_proj;
-    vec4 ambient_light_color;
-    vec4 light_position;
-    vec4 light_color;
-    vec4 falloff;
-} ubo;
+} camera_data;
 
 layout(push_constant) uniform Push {
     mat4 model_matrix;
@@ -26,7 +22,7 @@ layout(push_constant) uniform Push {
 
 void main() {
     vec4 pos_world = push.model_matrix * vec4(pos, 1.0);
-    gl_Position = ubo.view_proj * pos_world;
+    gl_Position = camera_data.view_proj * pos_world;
 
     frag_pos_world = pos_world.xyz;
     frag_color = color;
