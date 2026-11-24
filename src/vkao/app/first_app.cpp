@@ -129,7 +129,7 @@ void FirstApp::run() {
 
             frame.shadows.sampling_buffer =
                 make_ref<Buffer>(device_,
-                                 sizeof(CascadedShadowUBO),
+                                 sizeof(ShadowDrawUBO),
                                  1,
                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
@@ -295,24 +295,28 @@ void FirstApp::run() {
                                                      1000.f,
                                                      directional_light_dir);
 
-            CascadedShadowUBO cascaded_ubo{};
-            cascaded_ubo.camera_view = camera.get_view();
+            ShadowDrawUBO shadow_draw_ubo{};
+            shadow_draw_ubo.camera_view = camera.get_view();
 
             for (uint32_t i = 0; i < CASCADE_COUNT; ++i) {
-                cascaded_ubo.light_view_proj[i] = cascades[i].light_view_proj;
-                cascaded_ubo.split_depths[i] = cascades[i].split_depth;
+                shadow_draw_ubo.light_view_proj[i] =
+                    cascades[i].light_view_proj;
+                shadow_draw_ubo.split_depths[i] = cascades[i].split_depth;
             }
 
             auto &shadows = frame.shadows;
 
-            shadows.sampling_buffer->write_to_buffer(&cascaded_ubo);
+            shadows.sampling_buffer->write_to_buffer(&shadow_draw_ubo);
 
             VKAO_ASSERT(shadows.sampling_buffer->flush() == VK_SUCCESS,
                         "failed to flush shadow buffer");
 
-            shadow_pass.render(frame_info,
-                               shadows.atlas->get_render_target(),
-                               shadows.draw_set);
+            ShadowDraw draw{
+                ShadowProjection::DirectionalAtlas,
+                shadows.atlas->get_render_target(),
+                frame.shadows.draw_set,
+            };
+            shadow_pass.render(frame_info, draw);
 
             // update
             CameraUBO camera_ubo{};
@@ -368,20 +372,20 @@ void FirstApp::load_entities() {
         light.color = glm::vec4{1.f, 1.f, 1.f, 1.f};
     }
 
-    // {
-    //     auto entity = registry_.create_entity();
-    //     entities_[entity.get_component<IdComponent>().id] = entity;
+    {
+        auto entity = registry_.create_entity();
+        entities_[entity.get_component<IdComponent>().id] = entity;
 
-    //     auto &tf = entity.get_component<TransformComponent>();
-    //     tf.rotation = {1.f, 1.f, -1.f};
-    //     tf.translation = {-1.f, 0.f, 1.f};
+        auto &tf = entity.get_component<TransformComponent>();
+        tf.rotation = {1.f, 1.f, -1.f};
+        tf.translation = {-1.f, 0.f, 1.f};
 
-    //     auto &light = entity.add_component<LightComponent>();
-    //     light.type = LightComponent::LightType::Spot;
-    //     light.color = glm::vec4{1.f, 0.f, 0.f, 1.f};
-    //     light.cone.inner = glm::radians(12.5f);
-    //     light.cone.outer = glm::radians(17.5f);
-    // }
+        auto &light = entity.add_component<LightComponent>();
+        light.type = LightComponent::LightType::Spot;
+        light.color = glm::vec4{1.f, 0.f, 0.f, 1.f};
+        light.cone.inner = glm::radians(12.5f);
+        light.cone.outer = glm::radians(17.5f);
+    }
 
     {
         auto entity = registry_.create_entity();

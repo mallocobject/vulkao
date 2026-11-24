@@ -25,15 +25,11 @@ struct LightingUBO {
     alignas(16) glm::vec4 ambient_light_color{
         1.f, 1.f, 1.f, 0.02f}; // w is intensity
     std::array<Light, MAX_LIGHTS> lights{};
-    alignas(16) uint32_t light_count{1};
+    alignas(16) uint32_t light_count{0};
 };
 
-struct ShadowUBO {
-    alignas(16) glm::mat4 light_view_proj{1.f};
-};
-
-struct CascadedShadowUBO {
-    alignas(16) std::array<glm::mat4, CASCADE_COUNT> light_view_proj{};
+struct ShadowDrawUBO {
+    alignas(16) std::array<glm::mat4, 6> light_view_proj;
     alignas(16) glm::vec4 split_depths{0.f};
     alignas(16) glm::mat4 camera_view{1.f};
 };

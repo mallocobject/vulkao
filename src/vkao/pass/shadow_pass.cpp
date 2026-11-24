@@ -23,17 +23,22 @@ ShadowPass::~ShadowPass() {
     vkDestroyPipelineLayout(device_.get_device(), pipeline_layout_, nullptr);
 }
 
-void ShadowPass::render(FrameInfo &frame_info, const RenderTarget &target) {
-    begin(frame_info.command_buffer, target);
-    draw_scene(frame_info);
-    end(frame_info.command_buffer);
-}
+void ShadowPass::render(FrameInfo &frame_info, const ShadowDraw &draw) {
+    uint32_t instance_count = 1;
+    switch (draw.projection) {
+    case ShadowProjection::DirectionalAtlas:
+        instance_count = CASCADE_COUNT;
+        break;
+    case ShadowProjection::Spot:
+        instance_count = 1;
+        break;
+    case ShadowProjection::PointCube:
+        VKAO_ASSERT(false, "PointCube requires a layered shadow target");
+        return;
+    }
 
-void ShadowPass::render(FrameInfo &frame_info,
-                        const RenderTarget &target,
-                        VkDescriptorSet shadow_descriptor_set) {
-    begin(frame_info.command_buffer, target);
-    draw_scene(frame_info, shadow_descriptor_set);
+    begin(frame_info.command_buffer, draw.target, draw.projection);
+    draw_scene(frame_info, draw.draw_set, instance_count);
     end(frame_info.command_buffer);
 }
 
@@ -92,7 +97,8 @@ void ShadowPass::create_pipeline(VkRenderPass render_pass) {
 }
 
 void ShadowPass::begin(VkCommandBuffer command_buffer,
-                       const RenderTarget &target) {
+                       const RenderTarget &target,
+                       ShadowProjection projection) {
     VkRenderPassBeginInfo render_pass_info{};
     render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     render_pass_info.renderPass = target.render_pass;
@@ -113,62 +119,36 @@ void ShadowPass::begin(VkCommandBuffer command_buffer,
     std::array<VkRect2D, CASCADE_COUNT> scissors{};
     static_assert(CASCADE_COUNT == 4);
 
-    const uint32_t tile_w = target.extent.width / 2;
-    const uint32_t tile_h = target.extent.height / 2;
+    const bool atlas = projection == ShadowProjection::DirectionalAtlas;
+    const uint32_t width =
+        atlas ? target.extent.width / 2 : target.extent.width;
+    const uint32_t height =
+        atlas ? target.extent.height / 2 : target.extent.height;
 
     for (uint32_t i = 0; i < CASCADE_COUNT; ++i) {
-        const uint32_t x = (i % 2) * tile_w;
-        const uint32_t y = (i / 2) * tile_h;
+        const uint32_t x = atlas ? (i % 2) * width : 0;
+        const uint32_t y = atlas ? (i / 2) * height : 0;
 
         viewports[i] = {
             static_cast<float>(x),
             static_cast<float>(y),
-            static_cast<float>(tile_w),
-            static_cast<float>(tile_h),
+            static_cast<float>(width),
+            static_cast<float>(height),
             0.f,
             1.f,
         };
 
         scissors[i].offset = {static_cast<int32_t>(x), static_cast<int32_t>(y)};
-        scissors[i].extent = {tile_w, tile_h};
+        scissors[i].extent = {width, height};
     }
 
     vkCmdSetViewport(command_buffer, 0, CASCADE_COUNT, viewports.data());
     vkCmdSetScissor(command_buffer, 0, CASCADE_COUNT, scissors.data());
 }
 
-void ShadowPass::draw_scene(FrameInfo &frame_info) {
-    pipeline_->bind(frame_info.command_buffer);
-
-    vkCmdBindDescriptorSets(frame_info.command_buffer,
-                            VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeline_layout_,
-                            0,
-                            1,
-                            &frame_info.descriptor_sets[0],
-                            0,
-                            nullptr);
-
-    for (auto [handle, tf, mesh] :
-         frame_info.registry.view<TransformComponent, MeshComponent>().each()) {
-
-        PushConstant push{};
-        push.model_matrix = tf.model_matrix();
-
-        vkCmdPushConstants(frame_info.command_buffer,
-                           pipeline_layout_,
-                           VK_SHADER_STAGE_VERTEX_BIT,
-                           0,
-                           sizeof(PushConstant),
-                           &push);
-
-        mesh.mesh->bind(frame_info.command_buffer);
-        mesh.mesh->draw(frame_info.command_buffer, CASCADE_COUNT);
-    }
-}
-
 void ShadowPass::draw_scene(FrameInfo &frame_info,
-                            VkDescriptorSet shadow_descriptor_set) {
+                            VkDescriptorSet draw_set,
+                            uint32_t instance_count) {
     auto command_buffer = frame_info.command_buffer;
 
     pipeline_->bind(frame_info.command_buffer);
@@ -178,7 +158,7 @@ void ShadowPass::draw_scene(FrameInfo &frame_info,
                             pipeline_layout_,
                             0,
                             1,
-                            &shadow_descriptor_set,
+                            &draw_set,
                             0,
                             nullptr);
 
@@ -195,7 +175,7 @@ void ShadowPass::draw_scene(FrameInfo &frame_info,
                            &push);
 
         mesh.mesh->bind(command_buffer);
-        mesh.mesh->draw(command_buffer);
+        mesh.mesh->draw(command_buffer, instance_count);
     }
 }
 

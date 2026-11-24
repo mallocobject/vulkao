@@ -32,7 +32,7 @@ layout(std140, set = 0, binding = 1) uniform LightingUBO {
 layout(set = 1, binding = 0) uniform sampler2D material_textures[32];
 
 layout(std140, set = 2, binding = 0) uniform CascadedShadowUBO {
-    mat4 light_view_proj[4];
+    mat4 light_view_proj[6];
     vec4 split_depths;  // 0|<--->|x|<--->|y|<--->|z|<--->|w
     mat4 camera_view;
 } shadow_data;

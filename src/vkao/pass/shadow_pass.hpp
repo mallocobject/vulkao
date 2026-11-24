@@ -5,10 +5,23 @@
 #include "graphics/frame_info.hpp"
 #include "graphics/pipeline.hpp"
 #include "graphics/render_target.hpp"
+#include <cstdint>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
 namespace vkao {
+enum class ShadowProjection {
+    DirectionalAtlas,
+    PointCube,
+    Spot,
+};
+
+struct ShadowDraw {
+    ShadowProjection projection;
+    RenderTarget target;
+    VkDescriptorSet draw_set;
+};
+
 class ShadowPass : public RefCounted {
   public:
     ShadowPass(Device &device,
@@ -17,19 +30,18 @@ class ShadowPass : public RefCounted {
     ~ShadowPass();
     ShadowPass(const ShadowPass &) = delete;
 
-    void render(FrameInfo &frame_info, const RenderTarget &target);
-    void render(FrameInfo &frame_info,
-                const RenderTarget &target,
-                VkDescriptorSet shadow_descriptor_set);
+    void render(FrameInfo &frame_info, const ShadowDraw &draw);
 
   private:
     void create_pipeline_layout(std::vector<VkDescriptorSetLayout> set_layouts);
     void create_pipeline(VkRenderPass render_pass);
 
-    void begin(VkCommandBuffer command_buffer, const RenderTarget &target);
-    void draw_scene(FrameInfo &frame_info);
+    void begin(VkCommandBuffer command_buffer,
+               const RenderTarget &target,
+               ShadowProjection projection);
     void draw_scene(FrameInfo &frame_info,
-                    VkDescriptorSet shadow_descriptor_set);
+                    VkDescriptorSet draw_set,
+                    uint32_t instance_count = 1);
     void end(VkCommandBuffer command_buffer);
 
     Device &device_;
