@@ -86,6 +86,18 @@ CascadeArray calculate_cascades(const glm::mat4 &camera_view,
         glm::mat4 light_proj = glm::orthoRH_ZO(
             -radius, radius, radius, -radius, 0.f, radius * 2.f);
 
+        constexpr float tile_resolution = static_cast<float>(CASCADE_TILE_SIZE);
+        glm::mat4 light_vp = light_proj * light_view;
+
+        const glm::vec2 origin_ndc =
+            glm::vec2(light_vp * glm::vec4(0.f, 0.f, 0.f, 1.f));
+        const glm::vec2 origin_texel = origin_ndc * (tile_resolution * 0.5f);
+        const glm::vec2 offset_ndc =
+            (glm::round(origin_texel) - origin_texel) * (2.f / tile_resolution);
+
+        light_proj[3][0] += offset_ndc.x;
+        light_proj[3][1] += offset_ndc.y;
+
         cascade_array[i].light_view_proj = light_proj * light_view;
         cascade_array[i].split_depth = (n + split * range);
 

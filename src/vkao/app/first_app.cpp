@@ -125,7 +125,8 @@ void FirstApp::run() {
 
         {
             frame.shadows.atlas =
-                make_ref<ShadowMap>(device_, VkExtent2D{2048, 2048});
+                make_ref<ShadowMap>(device_, VkExtent2D{DIRECTIONAL_ATLAS_SIZE,
+                                                        DIRECTIONAL_ATLAS_SIZE});
 
             frame.shadows.sampling_buffer =
                 make_ref<Buffer>(device_,
@@ -286,6 +287,7 @@ void FirstApp::run() {
                     directional_light_dir =
                         glm::vec3{rotation_matrix_from_euler(tf.rotation) *
                                   glm::vec4{0.f, 1.f, 0.f, 0.f}};
+                    break;
                 }
             }
 
@@ -365,7 +367,7 @@ void FirstApp::load_entities() {
         entities_[entity.get_component<IdComponent>().id] = entity;
 
         auto &tf = entity.get_component<TransformComponent>();
-        tf.rotation = {1.f, 1.f, -1.f};
+        tf.rotation = {glm::radians(-45.f), glm::radians(-45.f), 0.f};
 
         auto &light = entity.add_component<LightComponent>();
         light.type = LightComponent::LightType::Directional;
