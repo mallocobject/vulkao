@@ -88,8 +88,8 @@ void Device::create_instance() {
     VkDebugUtilsMessengerCreateInfoEXT debug_create_info;
     if (enableValidationLayers) {
         create_info.enabledLayerCount =
-            static_cast<uint32_t>(validationLayers.size());
-        create_info.ppEnabledLayerNames = validationLayers.data();
+            static_cast<uint32_t>(validation_layers_.size());
+        create_info.ppEnabledLayerNames = validation_layers_.data();
 
         populate_debug_messenger_create_info(debug_create_info);
         create_info.pNext =
@@ -151,6 +151,7 @@ void Device::create_logical_device() {
     VkPhysicalDeviceFeatures device_features = {};
     device_features.samplerAnisotropy = VK_TRUE;
     device_features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+    device_features.multiViewport = VK_TRUE;
 
     VkDeviceCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -161,8 +162,8 @@ void Device::create_logical_device() {
 
     create_info.pEnabledFeatures = &device_features;
     create_info.enabledExtensionCount =
-        static_cast<uint32_t>(deviceExtensions.size());
-    create_info.ppEnabledExtensionNames = deviceExtensions.data();
+        static_cast<uint32_t>(device_extensions_.size());
+    create_info.ppEnabledExtensionNames = device_extensions_.data();
 
     VKAO_ASSERT(
         vkCreateDevice(physical_device_, &create_info, nullptr, &device_) ==
@@ -211,7 +212,9 @@ bool Device::is_device_suitable(VkPhysicalDevice device) {
 
     return indices.is_complete() && extensions_supported &&
            swap_chain_adequate && supported_features.samplerAnisotropy &&
-           supported_features.shaderSampledImageArrayDynamicIndexing;
+           supported_features.shaderSampledImageArrayDynamicIndexing &&
+           supported_features.multiViewport &&
+           properties.limits.maxViewports >= 4;
 }
 
 void Device::populate_debug_messenger_create_info(
@@ -248,7 +251,7 @@ bool Device::check_validation_layer_support() {
     std::vector<VkLayerProperties> available_layers(layer_count);
     vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
 
-    for (const char *layer_name : validationLayers) {
+    for (const char *layer_name : validation_layers_) {
         bool layer_found = false;
 
         for (const auto &layer_properties : available_layers) {
@@ -315,8 +318,8 @@ bool Device::check_device_extension_support(VkPhysicalDevice device) {
     vkEnumerateDeviceExtensionProperties(
         device, nullptr, &extension_count, available_extensions.data());
 
-    std::set<std::string> required_extensions(deviceExtensions.begin(),
-                                              deviceExtensions.end());
+    std::set<std::string> required_extensions(device_extensions_.begin(),
+                                              device_extensions_.end());
 
     for (const auto &extension : available_extensions) {
         required_extensions.erase(extension.extensionName);

@@ -37,7 +37,7 @@ layout(std140, set = 2, binding = 0) uniform CascadedShadowUBO {
     mat4 camera_view;
 } shadow_data;
 
-layout(set = 2, binding = 1) uniform sampler2DShadow shadow_maps[4];
+layout(set = 2, binding = 1) uniform sampler2DShadow shadow_atlas;
 
 layout(push_constant) uniform Push {
     mat4 model_matrix;
@@ -46,13 +46,17 @@ layout(push_constant) uniform Push {
 } push;
 
 // PCF
-float filtered_visibility(sampler2DShadow depth_map, vec2 uv, float receiver_depth) {
-    vec2 texel = 1.0 / vec2(textureSize(depth_map, 0));
+float filtered_visibility(int cascade, vec2 local_uv, float receiver_depth) {
+    vec2 origin = vec2(cascade % 2, cascade / 2) * 0.5;
+    vec2 atlas_uv = origin + local_uv * 0.5;
+    vec2 texel = 1.0 / vec2(textureSize(shadow_atlas, 0));
     float visible = 0.0;
     for (int y = -1; y <= 1; ++y) {
         for (int x = -1; x <= 1; ++x) {
-            vec2 sample_uv = uv + vec2(x, y) * texel;
-            visible += textureLod(depth_map, vec3(sample_uv, receiver_depth), 0.0);
+            vec2 tap = clamp(atlas_uv + vec2(x, y) * texel,
+                            origin + 0.5 * texel,
+                            origin + vec2(0.5) - 0.5 * texel);
+            visible += textureLod(shadow_atlas, vec3(tap, receiver_depth), 0.0);
         }
     }
     return visible / 9.0;
@@ -74,7 +78,7 @@ float directional_visibility(vec3 world_position) {
         ndc.z < 0.0 || ndc.z > 1.0)
         return 1.0;
 
-    return filtered_visibility(shadow_maps[cascade], uv, ndc.z);
+    return filtered_visibility(cascade, uv, ndc.z);
 }
 
 void main() {

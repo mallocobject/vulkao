@@ -211,11 +211,11 @@ void Mesh::bind(VkCommandBuffer command_buffer) {
     }
 }
 
-void Mesh::draw(VkCommandBuffer command_buffer) {
+void Mesh::draw(VkCommandBuffer command_buffer, uint32_t instance_count) {
     if (has_index_buffer_) {
-        vkCmdDrawIndexed(command_buffer, index_count_, 1, 0, 0, 0);
+        vkCmdDrawIndexed(command_buffer, index_count_, instance_count, 0, 0, 0);
     } else {
-        vkCmdDraw(command_buffer, vertex_count_, 1, 0, 0);
+        vkCmdDraw(command_buffer, vertex_count_, instance_count, 0, 0);
     }
 }
 

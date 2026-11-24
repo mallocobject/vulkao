@@ -1,5 +1,6 @@
 #include "pass/shadow_pass.hpp"
 #include "core/logger.hpp"
+#include "graphics/shadow_config.hpp"
 #include "scene/component.hpp"
 
 namespace vkao {
@@ -84,6 +85,9 @@ void ShadowPass::create_pipeline(VkRenderPass render_pass) {
     config_info.pipeline_layout = pipeline_layout_;
     config_info.render_pass = render_pass;
 
+    config_info.viewport_info.viewportCount = CASCADE_COUNT;
+    config_info.viewport_info.scissorCount = CASCADE_COUNT;
+
     pipeline_ = make_ref<Pipeline>(device_, config_info);
 }
 
@@ -105,21 +109,32 @@ void ShadowPass::begin(VkCommandBuffer command_buffer,
     vkCmdBeginRenderPass(
         command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
-    {
-        VkViewport viewport{};
-        viewport.x = 0.f;
-        viewport.y = 0.f;
-        viewport.width = static_cast<float>(target.extent.width);
-        viewport.height = static_cast<float>(target.extent.height);
-        viewport.minDepth = 0.f;
-        viewport.maxDepth = 1.f;
-        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+    std::array<VkViewport, CASCADE_COUNT> viewports{};
+    std::array<VkRect2D, CASCADE_COUNT> scissors{};
+    static_assert(CASCADE_COUNT == 4);
 
-        VkRect2D scissor{};
-        scissor.offset = {0, 0};
-        scissor.extent = target.extent;
-        vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+    const uint32_t tile_w = target.extent.width / 2;
+    const uint32_t tile_h = target.extent.height / 2;
+
+    for (uint32_t i = 0; i < CASCADE_COUNT; ++i) {
+        const uint32_t x = (i % 2) * tile_w;
+        const uint32_t y = (i / 2) * tile_h;
+
+        viewports[i] = {
+            static_cast<float>(x),
+            static_cast<float>(y),
+            static_cast<float>(tile_w),
+            static_cast<float>(tile_h),
+            0.f,
+            1.f,
+        };
+
+        scissors[i].offset = {static_cast<int32_t>(x), static_cast<int32_t>(y)};
+        scissors[i].extent = {tile_w, tile_h};
     }
+
+    vkCmdSetViewport(command_buffer, 0, CASCADE_COUNT, viewports.data());
+    vkCmdSetScissor(command_buffer, 0, CASCADE_COUNT, scissors.data());
 }
 
 void ShadowPass::draw_scene(FrameInfo &frame_info) {
@@ -148,7 +163,7 @@ void ShadowPass::draw_scene(FrameInfo &frame_info) {
                            &push);
 
         mesh.mesh->bind(frame_info.command_buffer);
-        mesh.mesh->draw(frame_info.command_buffer);
+        mesh.mesh->draw(frame_info.command_buffer, CASCADE_COUNT);
     }
 }
 

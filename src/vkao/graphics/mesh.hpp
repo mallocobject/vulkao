@@ -43,7 +43,7 @@ class Mesh : public RefCounted {
     Mesh(const Mesh &) = delete;
 
     void bind(VkCommandBuffer command_buffer);
-    void draw(VkCommandBuffer command_buffer);
+    void draw(VkCommandBuffer command_buffer, uint32_t instance_count = 1);
 
     static Ref<Mesh> create(Device &device,
                             const std::filesystem::path &filepath);

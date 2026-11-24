@@ -35,8 +35,9 @@
 namespace vkao {
 namespace {
 struct ShadowFrameResources {
-    FrameCascades cascades;
+    Ref<ShadowMap> atlas;
     Ref<Buffer> sampling_buffer;
+    VkDescriptorSet draw_set{VK_NULL_HANDLE};
     VkDescriptorSet sampling_set{VK_NULL_HANDLE};
 };
 
@@ -88,84 +89,68 @@ void FirstApp::run() {
                          VK_SHADER_STAGE_FRAGMENT_BIT)
             .add_binding(1,
                          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                         VK_SHADER_STAGE_FRAGMENT_BIT,
-                         CASCADE_COUNT)
+                         VK_SHADER_STAGE_FRAGMENT_BIT)
             .build();
 
     std::array<FrameResources, SwapChain::MAX_FRAMES_IN_FLIGHT> frames{};
 
     for (auto &frame : frames) {
-        frame.camera_buffer =
-            make_ref<Buffer>(device_,
-                             sizeof(CameraUBO),
-                             1,
-                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        frame.lighting_buffer =
-            make_ref<Buffer>(device_,
-                             sizeof(LightingUBO),
-                             1,
-                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-
-        VKAO_ASSERT(frame.camera_buffer->map() == VK_SUCCESS,
-                    "failed to map camera buffer");
-        VKAO_ASSERT(frame.lighting_buffer->map() == VK_SUCCESS,
-                    "failed to map lighting buffer");
-
-        auto camera_info = frame.camera_buffer->descriptor_info();
-        auto lighting_info = frame.lighting_buffer->descriptor_info();
-        VKAO_ASSERT(DescriptorWriter(*global_set_layout, *global_pool_)
-                        .write_buffer(0, &camera_info)
-                        .write_buffer(1, &lighting_info)
-                        .build(frame.global_set),
-                    "failed to allocate global descriptor set");
-
-        for (auto &cascade : frame.shadows.cascades) {
-            cascade.shadow_map =
-                make_ref<ShadowMap>(device_, VkExtent2D{2048, 2048});
-
-            cascade.matrix_buffer =
+        {
+            frame.camera_buffer =
                 make_ref<Buffer>(device_,
-                                 sizeof(ShadowUBO),
+                                 sizeof(CameraUBO),
+                                 1,
+                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            frame.lighting_buffer =
+                make_ref<Buffer>(device_,
+                                 sizeof(LightingUBO),
                                  1,
                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
-            VKAO_ASSERT(cascade.matrix_buffer->map() == VK_SUCCESS,
+            VKAO_ASSERT(frame.camera_buffer->map() == VK_SUCCESS,
+                        "failed to map camera buffer");
+            VKAO_ASSERT(frame.lighting_buffer->map() == VK_SUCCESS,
+                        "failed to map lighting buffer");
+
+            auto camera_info = frame.camera_buffer->descriptor_info();
+            auto lighting_info = frame.lighting_buffer->descriptor_info();
+            VKAO_ASSERT(DescriptorWriter(*global_set_layout, *global_pool_)
+                            .write_buffer(0, &camera_info)
+                            .write_buffer(1, &lighting_info)
+                            .build(frame.global_set),
+                        "failed to allocate global descriptor set");
+        }
+
+        {
+            frame.shadows.atlas =
+                make_ref<ShadowMap>(device_, VkExtent2D{2048, 2048});
+
+            frame.shadows.sampling_buffer =
+                make_ref<Buffer>(device_,
+                                 sizeof(CascadedShadowUBO),
+                                 1,
+                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+            VKAO_ASSERT(frame.shadows.sampling_buffer->map() == VK_SUCCESS,
                         "failed to map shadow buffer");
 
-            auto buffer_info = cascade.matrix_buffer->descriptor_info();
+            auto buffer_info = frame.shadows.sampling_buffer->descriptor_info();
 
             VKAO_ASSERT(DescriptorWriter(*shadow_set_layout, *global_pool_)
                             .write_buffer(0, &buffer_info)
-                            .build(cascade.descriptor_set),
+                            .build(frame.shadows.draw_set),
                         "failed to allocate shadow descriptor set");
+            auto image_info = frame.shadows.atlas->descriptor_info();
+
+            VKAO_ASSERT(DescriptorWriter(*cascaded_set_layout, *global_pool_)
+                            .write_buffer(0, &buffer_info)
+                            .write_image(1, &image_info)
+                            .build(frame.shadows.sampling_set),
+                        "failed to allocate cascaded shadow descriptor set");
         }
-
-        frame.shadows.sampling_buffer =
-            make_ref<Buffer>(device_,
-                             sizeof(CascadedShadowUBO),
-                             1,
-                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-
-        VKAO_ASSERT(frame.shadows.sampling_buffer->map() == VK_SUCCESS,
-                    "failed to map cascaded shadow buffer");
-
-        auto buffer_info = frame.shadows.sampling_buffer->descriptor_info();
-        std::array<VkDescriptorImageInfo, CASCADE_COUNT> image_infos{};
-
-        for (uint32_t i = 0; i < CASCADE_COUNT; ++i) {
-            image_infos[i] =
-                frame.shadows.cascades[i].shadow_map->descriptor_info();
-        }
-
-        VKAO_ASSERT(DescriptorWriter(*cascaded_set_layout, *global_pool_)
-                        .write_buffer(0, &buffer_info)
-                        .write_image(1, image_infos.data(), CASCADE_COUNT)
-                        .build(frame.shadows.sampling_set),
-                    "failed to allocate cascaded shadow descriptor set");
     }
 
     constexpr uint32_t material_texture_count = 32;
@@ -201,7 +186,7 @@ void FirstApp::run() {
 
     ShadowPass shadow_pass{
         device_,
-        frames.front().shadows.cascades.front().shadow_map->get_render_pass(),
+        frames.front().shadows.atlas->get_render_pass(),
         {shadow_set_layout->get_descriptor_set_layout()},
     };
 
@@ -314,23 +299,20 @@ void FirstApp::run() {
             cascaded_ubo.camera_view = camera.get_view();
 
             for (uint32_t i = 0; i < CASCADE_COUNT; ++i) {
-                auto &resources = frame.shadows.cascades[i];
-
-                ShadowUBO shadow_ubo{};
-                shadow_ubo.light_view_proj = cascades[i].light_view_proj;
-
-                resources.matrix_buffer->write_to_buffer(&shadow_ubo);
-
-                VKAO_ASSERT(resources.matrix_buffer->flush() == VK_SUCCESS,
-                            "failed to flush shadow buffer");
-
                 cascaded_ubo.light_view_proj[i] = cascades[i].light_view_proj;
                 cascaded_ubo.split_depths[i] = cascades[i].split_depth;
-
-                shadow_pass.render(frame_info,
-                                   resources.shadow_map->get_render_target(),
-                                   resources.descriptor_set);
             }
+
+            auto &shadows = frame.shadows;
+
+            shadows.sampling_buffer->write_to_buffer(&cascaded_ubo);
+
+            VKAO_ASSERT(shadows.sampling_buffer->flush() == VK_SUCCESS,
+                        "failed to flush shadow buffer");
+
+            shadow_pass.render(frame_info,
+                               shadows.atlas->get_render_target(),
+                               shadows.draw_set);
 
             // update
             CameraUBO camera_ubo{};
@@ -348,9 +330,6 @@ void FirstApp::run() {
             // render
             const auto target = renderer_.get_current_render_target();
 
-            frame.shadows.sampling_buffer->write_to_buffer(&cascaded_ubo);
-            VKAO_ASSERT(frame.shadows.sampling_buffer->flush() == VK_SUCCESS,
-                        "failed to flush cascaded shadow buffer");
             forward_pass.render(frame_info, target);
 
             renderer_.end_frame();

@@ -130,10 +130,12 @@ class Device : public RefCounted {
     VkSurfaceKHR surface_;
     VkCommandPool command_pool_;
 
-    const std::vector<const char *> validationLayers = {
+    const std::vector<const char *> validation_layers_ = {
         "VK_LAYER_KHRONOS_validation"};
 
-    const std::vector<const char *> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    const std::vector<const char *> device_extensions_ = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME,
+    };
 };
 } // namespace vkao

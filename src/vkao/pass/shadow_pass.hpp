@@ -1,22 +1,23 @@
 #pragma once
 
+#include "core/ref.hpp"
 #include "graphics/device.hpp"
 #include "graphics/frame_info.hpp"
 #include "graphics/pipeline.hpp"
-#include "graphics/render_pass.hpp"
 #include "graphics/render_target.hpp"
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
 namespace vkao {
-class ShadowPass : public RenderPass {
+class ShadowPass : public RefCounted {
   public:
     ShadowPass(Device &device,
                VkRenderPass render_pass,
                std::vector<VkDescriptorSetLayout> set_layouts);
     ~ShadowPass();
+    ShadowPass(const ShadowPass &) = delete;
 
-    void render(FrameInfo &frame_info, const RenderTarget &target) override;
+    void render(FrameInfo &frame_info, const RenderTarget &target);
     void render(FrameInfo &frame_info,
                 const RenderTarget &target,
                 VkDescriptorSet shadow_descriptor_set);
