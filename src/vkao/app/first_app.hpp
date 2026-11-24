@@ -1,9 +1,11 @@
 #pragma once
 
 #include "core/ref.hpp"
+#include "graphics/buffer.hpp"
 #include "graphics/descriptor.hpp"
 #include "graphics/device.hpp"
 #include "graphics/renderer.hpp"
+#include "graphics/texture.hpp"
 #include "platform/window.hpp"
 #include "scene/entity.hpp"
 #include "scene/registry.hpp"
@@ -39,5 +41,6 @@ class FirstApp : public RefCounted {
 
     Registry registry_;
     std::unordered_map<uint32_t, Entity> entities_;
+    Ref<Texture> white_texture_;
 };
 } // namespace vkao

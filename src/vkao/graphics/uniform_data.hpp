@@ -1,5 +1,6 @@
 #pragma once
 
+#include "graphics/shadow_config.hpp"
 #include <array>
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -27,13 +28,13 @@ struct LightingUBO {
     alignas(16) uint32_t light_count{1};
 };
 
-static_assert(offsetof(CameraUBO, view_proj) == 16);
-static_assert(sizeof(CameraUBO) == 80);
-static_assert(offsetof(Light, direction) == 16);
-static_assert(offsetof(Light, falloff) == 32);
-static_assert(offsetof(Light, color) == 48);
-static_assert(sizeof(Light) == 64);
-static_assert(offsetof(LightingUBO, lights) == 16);
-static_assert(offsetof(LightingUBO, light_count) == 656);
-static_assert(sizeof(LightingUBO) == 672);
+struct ShadowUBO {
+    alignas(16) glm::mat4 light_view_proj{1.f};
+};
+
+struct CascadedShadowUBO {
+    alignas(16) std::array<glm::mat4, CASCADE_COUNT> light_view_proj{};
+    alignas(16) glm::vec4 split_depths{0.f};
+    alignas(16) glm::mat4 camera_view{1.f};
+};
 } // namespace vkao

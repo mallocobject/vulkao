@@ -24,10 +24,12 @@ Texture::Texture(Device &device,
 }
 
 Texture::~Texture() {
-    vkDestroySampler(device_.get_device(), sampler_, nullptr);
-    vkDestroyImageView(device_.get_device(), image_view_, nullptr);
-    vkDestroyImage(device_.get_device(), image_, nullptr);
-    vkFreeMemory(device_.get_device(), image_memory_, nullptr);
+    auto device = device_.get_device();
+
+    vkDestroySampler(device, sampler_, nullptr);
+    vkDestroyImageView(device, image_view_, nullptr);
+    vkDestroyImage(device, image_, nullptr);
+    vkFreeMemory(device, image_memory_, nullptr);
 }
 
 VkDescriptorImageInfo Texture::descriptor_info() const {

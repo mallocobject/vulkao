@@ -12,9 +12,7 @@ namespace {
 static std::vector<char> read_file(const std::filesystem::path &filepath) {
     std::ifstream file(filepath, std::ios::ate | std::ios::binary);
 
-    if (!file.is_open()) {
-        throw std::runtime_error("failed to open file!");
-    }
+    VKAO_ASSERT(file.is_open(), "failed to open file!");
 
     size_t file_size = (size_t)file.tellg();
     std::vector<char> buffer(file_size);
@@ -28,24 +26,19 @@ static std::vector<char> read_file(const std::filesystem::path &filepath) {
 }
 } // namespace
 
-Pipeline::Pipeline(Device &device,
-                   const std::filesystem::path &vert_filepath,
-                   const std::filesystem::path &frag_filepath,
-                   const PipelineConfigInfo &config_info)
+Pipeline::Pipeline(Device &device, const PipelineConfigInfo &config_info)
     : device_{device} {
-    create_graphics_pipeline(vert_filepath, frag_filepath, config_info);
+    create_graphics_pipeline(config_info);
 }
 vkao::Pipeline::~Pipeline() {
-    vkDestroyShaderModule(device_.get_device(), frag_shader_module_, nullptr);
-    vkDestroyShaderModule(device_.get_device(), vert_shader_module_, nullptr);
+    for (auto &shader_module : shader_modules_) {
+        vkDestroyShaderModule(device_.get_device(), shader_module, nullptr);
+    }
 
     vkDestroyPipeline(device_.get_device(), graphics_pipeline_, nullptr);
 }
 
-void Pipeline::create_graphics_pipeline(
-    const std::filesystem::path &vert_filepath,
-    const std::filesystem::path &frag_filepath,
-    const PipelineConfigInfo &config_info) {
+void Pipeline::create_graphics_pipeline(const PipelineConfigInfo &config_info) {
 
     VKAO_ASSERT(config_info.pipeline_layout != VK_NULL_HANDLE,
                 "cannot create graphics pipeline: no pipeline_layout provided "
@@ -54,24 +47,23 @@ void Pipeline::create_graphics_pipeline(
                 "cannot create graphics pipeline: no render_pass provided "
                 "on config_info");
 
-    auto vert_code = read_file(vert_filepath);
-    auto frag_code = read_file(frag_filepath);
+    std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
 
-    create_shader_module(vert_code, &vert_shader_module_);
-    create_shader_module(frag_code, &frag_shader_module_);
+    for (const auto &shader : config_info.shader_stages) {
+        auto code = read_file(shader.filepath);
 
-    VkPipelineShaderStageCreateInfo shader_stage_infos[2]{};
-    shader_stage_infos[0].sType =
-        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shader_stage_infos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    shader_stage_infos[0].module = vert_shader_module_;
-    shader_stage_infos[0].pName = "main";
+        VkShaderModule module{VK_NULL_HANDLE};
+        create_shader_module(code, &module);
+        shader_modules_.push_back(module);
 
-    shader_stage_infos[1].sType =
-        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shader_stage_infos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    shader_stage_infos[1].module = frag_shader_module_;
-    shader_stage_infos[1].pName = "main";
+        VkPipelineShaderStageCreateInfo stage_info{};
+        stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stage_info.stage = shader.stage;
+        stage_info.module = module;
+        stage_info.pName = "main";
+
+        shader_stages.push_back(stage_info);
+    }
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info{};
     vertex_input_info.sType =
@@ -87,8 +79,8 @@ void Pipeline::create_graphics_pipeline(
 
     VkGraphicsPipelineCreateInfo pipeline_info{};
     pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline_info.stageCount = 2;
-    pipeline_info.pStages = shader_stage_infos;
+    pipeline_info.stageCount = static_cast<uint32_t>(shader_stages.size());
+    pipeline_info.pStages = shader_stages.data();
     pipeline_info.pVertexInputState = &vertex_input_info;
     pipeline_info.pInputAssemblyState = &config_info.input_assembly_info;
     pipeline_info.pViewportState = &config_info.viewport_info;
@@ -96,7 +88,16 @@ void Pipeline::create_graphics_pipeline(
     pipeline_info.pMultisampleState = &config_info.multisample_info;
     pipeline_info.pDepthStencilState =
         &config_info.depth_stencil_info; // Optional
-    pipeline_info.pColorBlendState = &config_info.color_blend_info;
+
+    auto color_blend_info = config_info.color_blend_info;
+    color_blend_info.attachmentCount =
+        static_cast<uint32_t>(config_info.color_blend_attachments.size());
+    color_blend_info.pAttachments =
+        config_info.color_blend_attachments.empty()
+            ? nullptr
+            : config_info.color_blend_attachments.data();
+    pipeline_info.pColorBlendState = &color_blend_info;
+
     pipeline_info.pDynamicState = &config_info.dynamic_state_info;
 
     pipeline_info.layout = config_info.pipeline_layout;
@@ -176,30 +177,31 @@ void Pipeline::create_default_pipeline_config_info(
     config_info.multisample_info.alphaToCoverageEnable = VK_FALSE; // Optional
     config_info.multisample_info.alphaToOneEnable = VK_FALSE;      // Optional
 
-    config_info.color_blend_attachment.colorWriteMask =
+    VkPipelineColorBlendAttachmentState color_blend_attachment{};
+    color_blend_attachment.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    config_info.color_blend_attachment.blendEnable = VK_FALSE;
-    config_info.color_blend_attachment.srcColorBlendFactor =
+    color_blend_attachment.blendEnable = VK_FALSE;
+    color_blend_attachment.srcColorBlendFactor =
         VK_BLEND_FACTOR_ONE; // Optional
-    config_info.color_blend_attachment.dstColorBlendFactor =
-        VK_BLEND_FACTOR_ZERO; // Optional
-    config_info.color_blend_attachment.colorBlendOp =
-        VK_BLEND_OP_ADD; // Optional
-    config_info.color_blend_attachment.srcAlphaBlendFactor =
+    color_blend_attachment.dstColorBlendFactor =
+        VK_BLEND_FACTOR_ZERO;                              // Optional
+    color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
+    color_blend_attachment.srcAlphaBlendFactor =
         VK_BLEND_FACTOR_ONE; // Optional
-    config_info.color_blend_attachment.dstAlphaBlendFactor =
-        VK_BLEND_FACTOR_ZERO; // Optional
-    config_info.color_blend_attachment.alphaBlendOp =
-        VK_BLEND_OP_ADD; // Optional
+    color_blend_attachment.dstAlphaBlendFactor =
+        VK_BLEND_FACTOR_ZERO;                              // Optional
+    color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+    config_info.color_blend_attachments.push_back(color_blend_attachment);
 
     config_info.color_blend_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     config_info.color_blend_info.logicOpEnable = VK_FALSE;
     config_info.color_blend_info.logicOp = VK_LOGIC_OP_COPY; // Optional
-    config_info.color_blend_info.attachmentCount = 1;
+    config_info.color_blend_info.attachmentCount =
+        static_cast<uint32_t>(config_info.color_blend_attachments.size());
     config_info.color_blend_info.pAttachments =
-        &config_info.color_blend_attachment;
+        config_info.color_blend_attachments.data();
     config_info.color_blend_info.blendConstants[0] = 0.0f; // Optional
     config_info.color_blend_info.blendConstants[1] = 0.0f; // Optional
     config_info.color_blend_info.blendConstants[2] = 0.0f; // Optional

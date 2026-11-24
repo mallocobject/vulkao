@@ -17,7 +17,8 @@ layout(std140, set = 0, binding = 0) uniform CameraUBO {
 
 layout(push_constant) uniform Push {
     mat4 model_matrix;
-    mat4 normal_matrix; // for normal Model Space -> World Space
+    vec4 normal_columns[3];
+    uint texture_slot;
 } push;
 
 void main() {
@@ -27,6 +28,10 @@ void main() {
     frag_pos_world = pos_world.xyz;
     frag_color = color;
     frag_uv = uv;
-    frag_normal_world = normalize(mat3(push.normal_matrix) * normal);
+
+    mat3 normal_matrix = mat3(push.normal_columns[0].xyz,
+                          push.normal_columns[1].xyz,
+                          push.normal_columns[2].xyz);
+    frag_normal_world = normalize(normal_matrix * normal);
 
 }

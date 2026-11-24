@@ -9,7 +9,7 @@ struct FrameInfo {
     float frame_time;
     VkCommandBuffer command_buffer;
     Camera &camera;
-    VkDescriptorSet descriptor_set;
     Registry &registry;
+    std::vector<VkDescriptorSet> descriptor_sets;
 };
 } // namespace vkao

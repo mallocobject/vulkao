@@ -37,7 +37,7 @@ struct MeshComponent {
 
 struct MaterialComponent {
     Ref<Texture> base_color_texture;
-    VkDescriptorSet descriptor_set{VK_NULL_HANDLE};
+    uint32_t texture_slot{0};
 };
 
 struct LightComponent {

@@ -7,9 +7,16 @@
 #include <vulkan/vulkan_core.h>
 
 namespace vkao {
+struct ShaderStageConfig {
+    VkShaderStageFlagBits stage;
+    std::filesystem::path filepath;
+};
+
 struct PipelineConfigInfo {
     PipelineConfigInfo() = default;
     PipelineConfigInfo(const PipelineConfigInfo &) = delete;
+
+    std::vector<ShaderStageConfig> shader_stages;
 
     std::vector<VkVertexInputBindingDescription> binding_description;
     std::vector<VkVertexInputAttributeDescription> attribute_description;
@@ -18,7 +25,7 @@ struct PipelineConfigInfo {
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info;
     VkPipelineRasterizationStateCreateInfo rasterization_info;
     VkPipelineMultisampleStateCreateInfo multisample_info;
-    VkPipelineColorBlendAttachmentState color_blend_attachment;
+    std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments;
     VkPipelineColorBlendStateCreateInfo color_blend_info;
     VkPipelineDepthStencilStateCreateInfo depth_stencil_info;
 
@@ -32,10 +39,7 @@ struct PipelineConfigInfo {
 
 class Pipeline : public RefCounted {
   public:
-    Pipeline(Device &device,
-             const std::filesystem::path &vert_filepath,
-             const std::filesystem::path &frag_filepath,
-             const PipelineConfigInfo &config_info);
+    Pipeline(Device &device, const PipelineConfigInfo &config_info);
     ~Pipeline();
 
     Pipeline(const Pipeline &) = delete;
@@ -46,16 +50,13 @@ class Pipeline : public RefCounted {
     create_default_pipeline_config_info(PipelineConfigInfo &config_info);
 
   private:
-    void create_graphics_pipeline(const std::filesystem::path &vert_filepath,
-                                  const std::filesystem::path &frag_filepath,
-                                  const PipelineConfigInfo &config_info);
+    void create_graphics_pipeline(const PipelineConfigInfo &config_info);
 
     void create_shader_module(const std::vector<char> &code,
                               VkShaderModule *shader_module);
 
     Device &device_;
     VkPipeline graphics_pipeline_;
-    VkShaderModule vert_shader_module_;
-    VkShaderModule frag_shader_module_;
+    std::vector<VkShaderModule> shader_modules_;
 };
 } // namespace vkao

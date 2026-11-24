@@ -16,15 +16,20 @@ class ShadowPass : public RenderPass {
                std::vector<VkDescriptorSetLayout> set_layouts);
     ~ShadowPass();
 
-  private:
-    void create_pipeline_layout(
-        std::vector<VkDescriptorSetLayout> set_layouts) override;
-    void create_pipeline(VkRenderPass render_pass) override;
+    void render(FrameInfo &frame_info, const RenderTarget &target) override;
+    void render(FrameInfo &frame_info,
+                const RenderTarget &target,
+                VkDescriptorSet shadow_descriptor_set);
 
-    void begin(VkCommandBuffer command_buffer,
-               const RenderTarget &target) override;
-    void draw_scene(FrameInfo &frame_info) override;
-    void end(VkCommandBuffer command_buffer) override;
+  private:
+    void create_pipeline_layout(std::vector<VkDescriptorSetLayout> set_layouts);
+    void create_pipeline(VkRenderPass render_pass);
+
+    void begin(VkCommandBuffer command_buffer, const RenderTarget &target);
+    void draw_scene(FrameInfo &frame_info);
+    void draw_scene(FrameInfo &frame_info,
+                    VkDescriptorSet shadow_descriptor_set);
+    void end(VkCommandBuffer command_buffer);
 
     Device &device_;
     Ref<Pipeline> pipeline_;

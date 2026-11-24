@@ -101,7 +101,8 @@ class DescriptorWriter {
                                    const VkDescriptorBufferInfo *buffer_info);
 
     DescriptorWriter &write_image(uint32_t binding,
-                                  const VkDescriptorImageInfo *image_info);
+                                  const VkDescriptorImageInfo *image_info,
+                                  uint32_t count = 1);
 
     bool build(VkDescriptorSet &set);
     void overwrite(VkDescriptorSet &set);

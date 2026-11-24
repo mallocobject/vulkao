@@ -3,11 +3,16 @@
 #include "scene/component.hpp"
 
 namespace vkao {
-struct SimplePushConstant {
+namespace {
+struct PushConstant {
     alignas(16) glm::mat4 model_matrix{1.f};
-    alignas(16) glm::mat4 normal_matrix{1.f};
+    alignas(16) glm::vec4 normal_columns[3]{};
+    alignas(4) uint32_t texture_slot{};
 };
-static_assert(sizeof(SimplePushConstant) <= 128);
+
+static_assert(offsetof(PushConstant, texture_slot) == 112);
+static_assert(sizeof(PushConstant) <= 128);
+} // namespace
 
 ForwardPass::ForwardPass(Device &device,
                          VkRenderPass render_pass,
@@ -21,13 +26,19 @@ ForwardPass::~ForwardPass() {
     vkDestroyPipelineLayout(device_.get_device(), pipeline_layout_, nullptr);
 }
 
+void ForwardPass::render(FrameInfo &frame_info, const RenderTarget &target) {
+    begin(frame_info.command_buffer, target);
+    draw_scene(frame_info);
+    end(frame_info.command_buffer);
+}
+
 void ForwardPass::create_pipeline_layout(
     std::vector<VkDescriptorSetLayout> set_layouts) {
     VkPushConstantRange push_constant_range{};
     push_constant_range.stageFlags =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant_range.offset = 0;
-    push_constant_range.size = sizeof(SimplePushConstant);
+    push_constant_range.size = sizeof(PushConstant);
 
     VkPipelineLayoutCreateInfo pipeline_layout_info{};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -52,10 +63,13 @@ void ForwardPass::create_pipeline(VkRenderPass render_pass) {
 
     Pipeline::create_default_pipeline_config_info(config_info);
 
+    config_info.shader_stages = {
+        {VK_SHADER_STAGE_VERTEX_BIT, "shader.vert.spv"},
+        {VK_SHADER_STAGE_FRAGMENT_BIT, "shader.frag.spv"},
+    };
     config_info.pipeline_layout = pipeline_layout_;
     config_info.render_pass = render_pass;
-    pipeline_ = make_ref<Pipeline>(
-        device_, "shader.vert.spv", "shader.frag.spv", config_info);
+    pipeline_ = make_ref<Pipeline>(device_, config_info);
 }
 
 void ForwardPass::begin(VkCommandBuffer command_buffer,
@@ -97,44 +111,46 @@ void ForwardPass::begin(VkCommandBuffer command_buffer,
 }
 
 void ForwardPass::draw_scene(FrameInfo &frame_info) {
+    auto command_buffer = frame_info.command_buffer;
+
     pipeline_->bind(frame_info.command_buffer);
 
-    vkCmdBindDescriptorSets(frame_info.command_buffer,
-                            VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeline_layout_,
-                            0,
-                            1,
-                            &frame_info.descriptor_set,
-                            0,
-                            nullptr);
+    for (int i = 0; i < frame_info.descriptor_sets.size(); i++) {
+        vkCmdBindDescriptorSets(command_buffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                pipeline_layout_,
+                                i,
+                                1,
+                                &frame_info.descriptor_sets[i],
+                                0,
+                                nullptr);
+    }
 
     for (auto [handle, tf, mesh, material] :
          frame_info.registry
              .view<TransformComponent, MeshComponent, MaterialComponent>()
              .each()) {
-        vkCmdBindDescriptorSets(frame_info.command_buffer,
-                                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                pipeline_layout_,
-                                1,
-                                1,
-                                &material.descriptor_set,
-                                0,
-                                nullptr);
 
-        SimplePushConstant push{};
+        PushConstant push{};
         push.model_matrix = tf.model_matrix();
-        push.normal_matrix = glm::mat4{tf.normal_matrix()};
 
-        vkCmdPushConstants(frame_info.command_buffer,
+        const auto normal_matrix = tf.normal_matrix();
+        for (int i = 0; i < 3; ++i) {
+            push.normal_columns[i] = glm::vec4{normal_matrix[i], 0.f};
+        }
+
+        push.texture_slot = material.texture_slot;
+
+        vkCmdPushConstants(command_buffer,
                            pipeline_layout_,
                            VK_SHADER_STAGE_VERTEX_BIT |
                                VK_SHADER_STAGE_FRAGMENT_BIT,
                            0,
-                           sizeof(SimplePushConstant),
+                           sizeof(PushConstant),
                            &push);
 
-        mesh.mesh->bind(frame_info.command_buffer);
-        mesh.mesh->draw(frame_info.command_buffer);
+        mesh.mesh->bind(command_buffer);
+        mesh.mesh->draw(command_buffer);
     }
 }
 

@@ -10,13 +10,17 @@
 #include "graphics/buffer.hpp"
 #include "graphics/camera.hpp"
 #include "graphics/camera_controller.hpp"
+#include "graphics/cascaded_shadow.hpp"
 #include "graphics/descriptor.hpp"
 #include "graphics/frame_info.hpp"
 #include "graphics/mesh.hpp"
+#include "graphics/shadow_config.hpp"
+#include "graphics/shadow_map.hpp"
 #include "graphics/swap_chain.hpp"
 #include "graphics/texture.hpp"
 #include "graphics/uniform_data.hpp"
 #include "pass/forward_pass.hpp"
+#include "pass/shadow_pass.hpp"
 #include "scene/component.hpp"
 #include "scene/entity.hpp"
 #include <algorithm>
@@ -29,44 +33,38 @@
 #include <vulkan/vulkan_core.h>
 
 namespace vkao {
+namespace {
+struct ShadowFrameResources {
+    FrameCascades cascades;
+    Ref<Buffer> sampling_buffer;
+    VkDescriptorSet sampling_set{VK_NULL_HANDLE};
+};
+
+struct FrameResources {
+    Ref<Buffer> camera_buffer;
+    Ref<Buffer> lighting_buffer;
+    VkDescriptorSet global_set{VK_NULL_HANDLE};
+    ShadowFrameResources shadows;
+    inline static VkDescriptorSet material_set{VK_NULL_HANDLE};
+};
+} // namespace
 
 FirstApp::FirstApp() {
-    global_pool_ = DescriptorPool::Builder(device_)
-                       .set_max_sets(SwapChain::MAX_FRAMES_IN_FLIGHT +
-                                     Texture::MAX_MATERIALS)
-                       .add_pool_size(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                                      2 * SwapChain::MAX_FRAMES_IN_FLIGHT)
-                       .add_pool_size(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                                      Texture::MAX_MATERIALS)
-                       .build();
+    constexpr uint32_t F = SwapChain::MAX_FRAMES_IN_FLIGHT;
+    constexpr uint32_t C = CASCADE_COUNT;
+    constexpr uint32_t M = Texture::MAX_MATERIALS;
+
+    global_pool_ =
+        DescriptorPool::Builder(device_)
+            .set_max_sets(F * (C + 2) + M)
+            .add_pool_size(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, F * (C + 3))
+            .add_pool_size(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, F * C + M)
+            .build();
 
     load_entities();
 }
 
 void FirstApp::run() {
-    std::vector<Ref<Buffer>> camera_buffers(SwapChain::MAX_FRAMES_IN_FLIGHT);
-    std::vector<Ref<Buffer>> lighting_buffers(SwapChain::MAX_FRAMES_IN_FLIGHT);
-
-    for (size_t i = 0; i < camera_buffers.size(); i++) {
-        camera_buffers[i] =
-            make_ref<Buffer>(device_,
-                             sizeof(CameraUBO),
-                             1,
-                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        lighting_buffers[i] =
-            make_ref<Buffer>(device_,
-                             sizeof(LightingUBO),
-                             1,
-                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-
-        VKAO_ASSERT(camera_buffers[i]->map() == VK_SUCCESS,
-                    "failed to map camera buffer");
-        VKAO_ASSERT(lighting_buffers[i]->map() == VK_SUCCESS,
-                    "failed to map lighting buffer");
-    }
-
     auto global_set_layout = DescriptorSetLayout::Builder(device_)
                                  .add_binding(0,
                                               VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -77,41 +75,143 @@ void FirstApp::run() {
                                               VK_SHADER_STAGE_FRAGMENT_BIT)
                                  .build();
 
-    std::vector<VkDescriptorSet> global_descriptor_sets(
-        SwapChain::MAX_FRAMES_IN_FLIGHT);
+    auto shadow_set_layout = DescriptorSetLayout::Builder(device_)
+                                 .add_binding(0,
+                                              VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                                              VK_SHADER_STAGE_VERTEX_BIT)
+                                 .build();
 
-    for (int i = 0; i < global_descriptor_sets.size(); i++) {
-        auto camera_info = camera_buffers[i]->descriptor_info();
-        auto lighting_info = lighting_buffers[i]->descriptor_info();
+    auto cascaded_set_layout =
+        DescriptorSetLayout::Builder(device_)
+            .add_binding(0,
+                         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                         VK_SHADER_STAGE_FRAGMENT_BIT)
+            .add_binding(1,
+                         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                         VK_SHADER_STAGE_FRAGMENT_BIT,
+                         CASCADE_COUNT)
+            .build();
+
+    std::array<FrameResources, SwapChain::MAX_FRAMES_IN_FLIGHT> frames{};
+
+    for (auto &frame : frames) {
+        frame.camera_buffer =
+            make_ref<Buffer>(device_,
+                             sizeof(CameraUBO),
+                             1,
+                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        frame.lighting_buffer =
+            make_ref<Buffer>(device_,
+                             sizeof(LightingUBO),
+                             1,
+                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+        VKAO_ASSERT(frame.camera_buffer->map() == VK_SUCCESS,
+                    "failed to map camera buffer");
+        VKAO_ASSERT(frame.lighting_buffer->map() == VK_SUCCESS,
+                    "failed to map lighting buffer");
+
+        auto camera_info = frame.camera_buffer->descriptor_info();
+        auto lighting_info = frame.lighting_buffer->descriptor_info();
         VKAO_ASSERT(DescriptorWriter(*global_set_layout, *global_pool_)
                         .write_buffer(0, &camera_info)
                         .write_buffer(1, &lighting_info)
-                        .build(global_descriptor_sets[i]),
+                        .build(frame.global_set),
                     "failed to allocate global descriptor set");
+
+        for (auto &cascade : frame.shadows.cascades) {
+            cascade.shadow_map =
+                make_ref<ShadowMap>(device_, VkExtent2D{2048, 2048});
+
+            cascade.matrix_buffer =
+                make_ref<Buffer>(device_,
+                                 sizeof(ShadowUBO),
+                                 1,
+                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+            VKAO_ASSERT(cascade.matrix_buffer->map() == VK_SUCCESS,
+                        "failed to map shadow buffer");
+
+            auto buffer_info = cascade.matrix_buffer->descriptor_info();
+
+            VKAO_ASSERT(DescriptorWriter(*shadow_set_layout, *global_pool_)
+                            .write_buffer(0, &buffer_info)
+                            .build(cascade.descriptor_set),
+                        "failed to allocate shadow descriptor set");
+        }
+
+        frame.shadows.sampling_buffer =
+            make_ref<Buffer>(device_,
+                             sizeof(CascadedShadowUBO),
+                             1,
+                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+        VKAO_ASSERT(frame.shadows.sampling_buffer->map() == VK_SUCCESS,
+                    "failed to map cascaded shadow buffer");
+
+        auto buffer_info = frame.shadows.sampling_buffer->descriptor_info();
+        std::array<VkDescriptorImageInfo, CASCADE_COUNT> image_infos{};
+
+        for (uint32_t i = 0; i < CASCADE_COUNT; ++i) {
+            image_infos[i] =
+                frame.shadows.cascades[i].shadow_map->descriptor_info();
+        }
+
+        VKAO_ASSERT(DescriptorWriter(*cascaded_set_layout, *global_pool_)
+                        .write_buffer(0, &buffer_info)
+                        .write_image(1, image_infos.data(), CASCADE_COUNT)
+                        .build(frame.shadows.sampling_set),
+                    "failed to allocate cascaded shadow descriptor set");
     }
+
+    constexpr uint32_t material_texture_count = 32;
 
     auto material_set_layout =
         DescriptorSetLayout::Builder(device_)
             .add_binding(0,
                          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                         VK_SHADER_STAGE_FRAGMENT_BIT)
+                         VK_SHADER_STAGE_FRAGMENT_BIT,
+                         material_texture_count)
             .build();
 
-    for (auto [handle, material] : registry_.view<MaterialComponent>().each()) {
-        auto image_info = material.base_color_texture->descriptor_info();
+    std::array<VkDescriptorImageInfo, material_texture_count> image_infos{};
 
-        VKAO_ASSERT(DescriptorWriter(*material_set_layout, *global_pool_)
-                        .write_image(0, &image_info)
-                        .build(material.descriptor_set),
-                    "failed to allocate material descriptor set");
+    for (auto [handle, material] : registry_.view<MaterialComponent>().each()) {
+        VKAO_ASSERT(material.texture_slot < image_infos.size(),
+                    "material texture slot out of range");
+
+        image_infos[material.texture_slot] =
+            material.base_color_texture->descriptor_info();
     }
+
+    for (auto &info : image_infos) {
+        if (info.imageView == VK_NULL_HANDLE) {
+            info = white_texture_->descriptor_info();
+        }
+    }
+
+    VKAO_ASSERT(DescriptorWriter(*material_set_layout, *global_pool_)
+                    .write_image(0, image_infos.data(), material_texture_count)
+                    .build(FrameResources::material_set),
+                "failed to allocate shared material descriptor set");
+
+    ShadowPass shadow_pass{
+        device_,
+        frames.front().shadows.cascades.front().shadow_map->get_render_pass(),
+        {shadow_set_layout->get_descriptor_set_layout()},
+    };
 
     ForwardPass forward_pass{
         device_,
         renderer_.get_swap_chain_render_pass(),
         {
-            global_set_layout->get_descriptor_set_layout(),
-            material_set_layout->get_descriptor_set_layout(),
+            global_set_layout->get_descriptor_set_layout(),   // set 0
+            material_set_layout->get_descriptor_set_layout(), // set 1
+            cascaded_set_layout->get_descriptor_set_layout(), // set 2
         }};
 
     Camera camera;
@@ -181,30 +281,76 @@ void FirstApp::run() {
 
         if (auto command_buffer = renderer_.begin_frame()) {
             int index = renderer_.get_frame_index();
-            FrameInfo frame_info{
-                index,
-                dt,
-                command_buffer,
-                camera,
-                global_descriptor_sets[index],
-                registry_,
-            };
+            auto &frame = frames[index];
+
+            FrameInfo frame_info{index,
+                                 dt,
+                                 command_buffer,
+                                 camera,
+                                 registry_,
+                                 {
+                                     frame.global_set,
+                                     frame.material_set,
+                                     frame.shadows.sampling_set,
+                                 }};
+
+            glm::vec3 directional_light_dir{1.f, 1.f, -1.f};
+            for (auto [handle, tf, light] :
+                 registry_.view<TransformComponent, LightComponent>().each()) {
+                if (light.type == LightComponent::LightType::Directional) {
+                    directional_light_dir =
+                        glm::vec3{rotation_matrix_from_euler(tf.rotation) *
+                                  glm::vec4{0.f, 1.f, 0.f, 0.f}};
+                }
+            }
+
+            const auto cascades = calculate_cascades(camera.get_view(),
+                                                     camera.get_projection(),
+                                                     0.1f,
+                                                     1000.f,
+                                                     directional_light_dir);
+
+            CascadedShadowUBO cascaded_ubo{};
+            cascaded_ubo.camera_view = camera.get_view();
+
+            for (uint32_t i = 0; i < CASCADE_COUNT; ++i) {
+                auto &resources = frame.shadows.cascades[i];
+
+                ShadowUBO shadow_ubo{};
+                shadow_ubo.light_view_proj = cascades[i].light_view_proj;
+
+                resources.matrix_buffer->write_to_buffer(&shadow_ubo);
+
+                VKAO_ASSERT(resources.matrix_buffer->flush() == VK_SUCCESS,
+                            "failed to flush shadow buffer");
+
+                cascaded_ubo.light_view_proj[i] = cascades[i].light_view_proj;
+                cascaded_ubo.split_depths[i] = cascades[i].split_depth;
+
+                shadow_pass.render(frame_info,
+                                   resources.shadow_map->get_render_target(),
+                                   resources.descriptor_set);
+            }
 
             // update
             CameraUBO camera_ubo{};
             camera_ubo.camera_position =
                 glm::vec4{camera_controller.get_position(), 1.f};
             camera_ubo.view_proj = camera.get_projection() * camera.get_view();
-            camera_buffers[index]->write_to_buffer(&camera_ubo);
-            VKAO_ASSERT(camera_buffers[index]->flush() == VK_SUCCESS,
+            frame.camera_buffer->write_to_buffer(&camera_ubo);
+            VKAO_ASSERT(frame.camera_buffer->flush() == VK_SUCCESS,
                         "failed to flush camera buffer");
 
-            lighting_buffers[index]->write_to_buffer(&lighting_ubo);
-            VKAO_ASSERT(lighting_buffers[index]->flush() == VK_SUCCESS,
+            frame.lighting_buffer->write_to_buffer(&lighting_ubo);
+            VKAO_ASSERT(frame.lighting_buffer->flush() == VK_SUCCESS,
                         "failed to flush lighting buffer");
 
             // render
             const auto target = renderer_.get_current_render_target();
+
+            frame.shadows.sampling_buffer->write_to_buffer(&cascaded_ubo);
+            VKAO_ASSERT(frame.shadows.sampling_buffer->flush() == VK_SUCCESS,
+                        "failed to flush cascaded shadow buffer");
             forward_pass.render(frame_info, target);
 
             renderer_.end_frame();
@@ -216,7 +362,7 @@ void FirstApp::run() {
 
 void FirstApp::load_entities() {
     const uint32_t while_pixels = ~0u;
-    auto white_texture = make_ref<Texture>(
+    white_texture_ = make_ref<Texture>(
         device_, 1, 1, reinterpret_cast<const uint8_t *>(&while_pixels));
 
     {
@@ -228,6 +374,7 @@ void FirstApp::load_entities() {
 
         auto &light = entity.add_component<LightComponent>();
         light.type = LightComponent::LightType::Point;
+        light.color = glm::vec4{0.f};
     }
 
     {
@@ -236,14 +383,26 @@ void FirstApp::load_entities() {
 
         auto &tf = entity.get_component<TransformComponent>();
         tf.rotation = {1.f, 1.f, -1.f};
-        tf.translation = {-1.f, 0.f, 1.f};
 
         auto &light = entity.add_component<LightComponent>();
-        light.type = LightComponent::LightType::Spot;
-        light.color = glm::vec4{1.f, 0.f, 0.f, 1.f};
-        light.cone.inner = glm::radians(12.5f);
-        light.cone.outer = glm::radians(17.5f);
+        light.type = LightComponent::LightType::Directional;
+        light.color = glm::vec4{1.f, 1.f, 1.f, 1.f};
     }
+
+    // {
+    //     auto entity = registry_.create_entity();
+    //     entities_[entity.get_component<IdComponent>().id] = entity;
+
+    //     auto &tf = entity.get_component<TransformComponent>();
+    //     tf.rotation = {1.f, 1.f, -1.f};
+    //     tf.translation = {-1.f, 0.f, 1.f};
+
+    //     auto &light = entity.add_component<LightComponent>();
+    //     light.type = LightComponent::LightType::Spot;
+    //     light.color = glm::vec4{1.f, 0.f, 0.f, 1.f};
+    //     light.cone.inner = glm::radians(12.5f);
+    //     light.cone.outer = glm::radians(17.5f);
+    // }
 
     {
         auto entity = registry_.create_entity();
@@ -259,6 +418,7 @@ void FirstApp::load_entities() {
             make_ref<Texture>(device_, ASSETS "/texture/Checkerboard.png");
         auto &material = entity.add_component<MaterialComponent>();
         material.base_color_texture = texture;
+        material.texture_slot = 1;
     }
 
     {
@@ -272,7 +432,8 @@ void FirstApp::load_entities() {
         entity.add_component<MeshComponent>(mesh);
 
         auto &material = entity.add_component<MaterialComponent>();
-        material.base_color_texture = white_texture;
+        material.base_color_texture = white_texture_;
+        material.texture_slot = 0;
     }
 
     {
@@ -286,7 +447,8 @@ void FirstApp::load_entities() {
         entity.add_component<MeshComponent>(mesh);
 
         auto &material = entity.add_component<MaterialComponent>();
-        material.base_color_texture = white_texture;
+        material.base_color_texture = white_texture_;
+        material.texture_slot = 0;
     }
 }
 

@@ -150,6 +150,7 @@ void Device::create_logical_device() {
 
     VkPhysicalDeviceFeatures device_features = {};
     device_features.samplerAnisotropy = VK_TRUE;
+    device_features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
 
     VkDeviceCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -209,7 +210,8 @@ bool Device::is_device_suitable(VkPhysicalDevice device) {
     vkGetPhysicalDeviceFeatures(device, &supported_features);
 
     return indices.is_complete() && extensions_supported &&
-           swap_chain_adequate && supported_features.samplerAnisotropy;
+           swap_chain_adequate && supported_features.samplerAnisotropy &&
+           supported_features.shaderSampledImageArrayDynamicIndexing;
 }
 
 void Device::populate_debug_messenger_create_info(

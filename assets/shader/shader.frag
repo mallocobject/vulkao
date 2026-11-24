@@ -29,8 +29,53 @@ layout(std140, set = 0, binding = 1) uniform LightingUBO {
 } light_data;
 
 
-layout(set = 1, binding = 0)
-uniform sampler2D base_color_texture;
+layout(set = 1, binding = 0) uniform sampler2D material_textures[32];
+
+layout(std140, set = 2, binding = 0) uniform CascadedShadowUBO {
+    mat4 light_view_proj[4];
+    vec4 split_depths;  // 0|<--->|x|<--->|y|<--->|z|<--->|w
+    mat4 camera_view;
+} shadow_data;
+
+layout(set = 2, binding = 1) uniform sampler2DShadow shadow_maps[4];
+
+layout(push_constant) uniform Push {
+    mat4 model_matrix;
+    vec4 normal_columns[3];
+    uint texture_slot;
+} push;
+
+// PCF
+float filtered_visibility(sampler2DShadow depth_map, vec2 uv, float receiver_depth) {
+    vec2 texel = 1.0 / vec2(textureSize(depth_map, 0));
+    float visible = 0.0;
+    for (int y = -1; y <= 1; ++y) {
+        for (int x = -1; x <= 1; ++x) {
+            vec2 sample_uv = uv + vec2(x, y) * texel;
+            visible += textureLod(depth_map, vec3(sample_uv, receiver_depth), 0.0);
+        }
+    }
+    return visible / 9.0;
+}
+
+float directional_visibility(vec3 world_position) {
+    vec4 world = vec4(world_position, 1.0);
+    float view_depth = (shadow_data.camera_view * world).z;
+    int cascade = 0;
+    while (cascade < 3 && view_depth > shadow_data.split_depths[cascade])
+        ++cascade;
+    if (view_depth > shadow_data.split_depths.w)
+        return 1.0;
+
+    vec4 clip = shadow_data.light_view_proj[cascade] * world;
+    vec3 ndc = clip.xyz / clip.w;
+    vec2 uv = ndc.xy * 0.5 + 0.5;
+    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0))) ||
+        ndc.z < 0.0 || ndc.z > 1.0)
+        return 1.0;
+
+    return filtered_visibility(shadow_maps[cascade], uv, ndc.z);
+}
 
 void main() {
     vec3 normal_world = normalize(frag_normal_world);
@@ -63,6 +108,8 @@ void main() {
                     attenuation *= smoothstep(
                         light.falloff.w, light.direction.w, cos_angle);
             }
+        } else {
+            attenuation = directional_visibility(frag_pos_world);
         }
 
         float n_dot_l = max(dot(normal_world, dir_light), 0.0);
@@ -76,7 +123,7 @@ void main() {
         }
     }
     
-    vec3 base_color = texture(base_color_texture, frag_uv).rgb * frag_color;
+    vec3 base_color = texture(material_textures[push.texture_slot], frag_uv).rgb * frag_color;
 
     out_color = vec4(base_color * (ambient + diffuse + specular), 1.0);
 }

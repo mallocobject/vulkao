@@ -37,4 +37,5 @@ target_compile_definitions(vulkao PRIVATE
 vulkao_add_shaders(vulkao
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/shader/shader.vert"
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/shader/shader.frag"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/shader/shadow.vert"
 )
